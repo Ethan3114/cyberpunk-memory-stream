@@ -7,4 +7,4 @@
 - 结尾 logo 的 X/Z 旋转归零；Y 仅在 -.2 到 .2 弧度之间轻微旋转。粒子与背景视频仍维持倒置场景，首尾虚无方向不变。
 - 本地实际快速 End 滚动至末尾：DEV probe 连续采样 2243 帧，.92 之后最近 logo/相机距离 12.06698388；最终旋转 [0,.2,0]，没有运行错误。在 progress=.935 的图标旋转约 [0,0,0]，正面可读。
 - TypeScript / Pages 子路径构建通过；代码 JS index-C_OABsPt.js，1027.53 kB / gzip 268.61 kB，仍有 >500 kB 提示。
-- 本地截图和采样：qa/particles-v12/。公网补验进行中。
+- 本地截图和采样：qa/particles-v12/。公网补验通过：工作流 38135517550 成功（32 秒），正式页面已加载 index-C_OABsPt.js。原生 End 达到 p=1，字标旋转 [0,.2,0]、相机距离 12.067；PageUp 返回 p=.9252，旋转 [0,-.03029,0]、距离仍为 12.067；errors=[]。截图 public-upright.jpg 与 public-check.json 保存于上述目录。

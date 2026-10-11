@@ -1,0 +1,187 @@
+{
+  "images": [
+    {
+      "file": "city.webp",
+      "source": "materials/supplemental/provenance/CITY_OFFICIAL_BLOOD_IN_RAIN_3840.jpg",
+      "processing": "Resize and WebP encoding; source composition retained"
+    },
+    {
+      "file": "v.webp",
+      "source": "materials/supplemental/round-3/characters/v/main.webp",
+      "processing": "Round-3 video poster, retained as static fallback and pre-playback image"
+    },
+    {
+      "file": "jackie.webp",
+      "source": "materials/supplemental/round-3/characters/jackie/main.webp",
+      "processing": "Round-3 video poster, retained as static fallback and pre-playback image"
+    },
+    {
+      "file": "david.webp",
+      "source": "materials/supplemental/round-3/characters/david/main.webp",
+      "processing": "Round-3 video poster, retained as static fallback and pre-playback image"
+    },
+    {
+      "file": "lucy.webp",
+      "source": "materials/supplemental/round-3/characters/lucy/alternate.webp",
+      "processing": "Round-3 video poster, retained as static fallback and pre-playback image"
+    },
+    {
+      "file": "core.webp",
+      "source": "materials/supplemental/core/core-main-v2.png",
+      "processing": "Resize and WebP encoding; source composition retained"
+    }
+  ],
+  "music": {
+    "file": "music.m4a",
+    "title": "I Really Want to Stay at Your House",
+    "artist": "Rosa Walton & Hallie Coggins",
+    "source": "https://www.youtube.com/watch?v=gzbLODUb1sA"
+  },
+  "cityDepth": "Official environment media on moving 3D planes; no reconstructed street geometry or fabricated depth map",
+  "core": {
+    "file": "models/spine-reference.json",
+    "source": "https://github.com/Abdulhadi446/activetheory.net/blob/37ceb0fbdeca1f12d129256629b05fab96bcebe1/assets/geometry/spine/spine.bin",
+    "processing": "Draco decoded; 40 instanced segments, 0.65 spacing, 0.4-radian twist; local metal materials and procedural mechanical attachments",
+    "vertices": 2375,
+    "trianglesPerSegment": 4244,
+    "status": "Published-site archive reference mesh; not an open-source Sandevistan model",
+    "fallback": "core.webp: separately generated 2D fallback"
+  },
+  "brand": [
+    {
+      "file": "cyberpunk-2077.png",
+      "source": "https://www.cyberpunk.net/build/images/logo-en-ed943f1c.png",
+      "dimensions": [
+        640,
+        160
+      ],
+      "processing": "Official complete logo for semantic/static fallback; visible WebGL opening uses the user-provided GLB"
+    },
+    {
+      "file": "cdpr.svg",
+      "source": "https://www.cdprojekt.com/en/wp-content/themes/cdprojekt/assets/images/cd_projekt_red_logo.svg",
+      "processing": "Official SVG retained; CSS monochrome white on dark background"
+    }
+  ],
+  "round3": {
+    "selection": [
+      {
+        "file": "media/v.mp4",
+        "source": "characters/v/main.mp4"
+      },
+      {
+        "file": "v.webp",
+        "source": "characters/v/main.webp"
+      },
+      {
+        "file": "media/jackie.mp4",
+        "source": "characters/jackie/main.mp4"
+      },
+      {
+        "file": "jackie.webp",
+        "source": "characters/jackie/main.webp"
+      },
+      {
+        "file": "media/david.mp4",
+        "source": "characters/david/main.mp4"
+      },
+      {
+        "file": "david.webp",
+        "source": "characters/david/main.webp"
+      },
+      {
+        "file": "media/lucy.mp4",
+        "source": "characters/lucy/alternate.mp4"
+      },
+      {
+        "file": "lucy.webp",
+        "source": "characters/lucy/alternate.webp"
+      },
+      {
+        "file": "media/scene-01.webp",
+        "source": "scenes/01/main.webp"
+      },
+      {
+        "file": "media/scene-02.webp",
+        "source": "scenes/02/main.webp"
+      },
+      {
+        "file": "media/scene-02.mp4",
+        "source": "scenes/02/main.mp4"
+      },
+      {
+        "file": "media/scene-03.webp",
+        "source": "scenes/03/main.webp"
+      },
+      {
+        "file": "media/scene-03.mp4",
+        "source": "scenes/03/main.mp4"
+      },
+      {
+        "file": "media/scene-04.webp",
+        "source": "scenes/04/main.webp"
+      },
+      {
+        "file": "media/scene-04.mp4",
+        "source": "scenes/04/main.mp4"
+      }
+    ],
+    "model": "models/cyberpunk-wordmark.glb",
+    "sourceManifest": "materials/supplemental/round-3/manifest.json",
+    "notes": [
+      "Scene 01 is an official still.",
+      "V is an official motion poster, not engine footage.",
+      "Lucy alternate selected for identifiable face and netrunner shots.",
+      "Montages are not seamless loops."
+    ],
+    "particles": "Opening: 65536 decoded forest points, shared official video illumination, source ParticleTest bubble shading, full vertex shape rules, pixel-unit GPU fluid/dye mask and first-order target relaxation. Second act: 65536 flower_spine points with spatial neon palette and native getFBR with original base/MRO/normal/matcap maps and particle reflection. Published post-processing shaders hosted in Three.js. No Hydra runtime."
+  },
+  "referenceParticles": {
+    "cloud": {
+      "file": "models/flower-reference.bin",
+      "source": "https://activetheory.net/assets/geometry/particles/flower_spine-256.bin",
+      "processing": "Draco decoded to Float32: 65536 xyz positions followed by 65536 rgb colors, retained as data; transformed by the project"
+    },
+    "matcap": {
+      "file": "particle-matcap.png",
+      "source": "https://activetheory.net/assets/images/particle/matcap3.png"
+    },
+    "shaderReference": "https://activetheory.net/assets/shaders/compiled.vs",
+    "runtime": "Project Three.js implementation; no archived application JS executed",
+    "openingCloud": {
+      "file": "models/forest-reference.bin",
+      "source": "https://activetheory.net/assets/geometry/particles/forest-256.bin",
+      "processing": "65536 decoded xyz/rgb points; source color used as luminance, project neon palette and shared official video supply light"
+    }
+  },
+  "opening": {
+    "video": "media/scene-02.mp4",
+    "poster": "media/scene-02.webp",
+    "sharing": "One muted local video element is shared by the opening backdrop, particle illumination, and later scene 02",
+    "blur": "13-tap spatial blur in the project backdrop shader; first-act video pauses after exit",
+    "reference": "ParticleTestShader / HomeVideoShader / HomeLogoShader; published ParticleTest/Fluid, VolumetricLight, UnrealBloom, HydraLensStreak and GlobalComposite ported to Three.js; branded content and composition adapted",
+    "stationary": "Forest transform, video plane and camera fixed during opening; scroll only rotates/lowers wordmark",
+    "transition": "Published FXScrollTransition between two independently rendered targets, .11-.20 timeline"
+  },
+  "referenceFbr": {
+    "files": [
+      "fbr/basecolor.png",
+      "fbr/mro.png",
+      "fbr/normal.png",
+      "fbr/matcap.jpg"
+    ],
+    "source": "https://activetheory.net/assets/shaders/compiled.vs",
+    "textures": [
+      "assets/images/pbr/alien_cracked_2_basecolor.png",
+      "assets/images/pbr/cliffs_MRO.png",
+      "assets/images/pbr/damaged_road_normal.png",
+      "assets/images/room/matcap-test.jpg"
+    ],
+    "shader": "Source getFBR / SpineShader with Three.js instancing and fade adaptations"
+  },
+  "glass": {
+    "normal": "glass/waternormals.jpg",
+    "source": "https://activetheory.net/assets/images/tree_room/waternormals.jpg",
+    "shader": "Published WorkItemShader adapted to one closed .30-deep rounded slab; optical background refraction and interior video"
+  }
+}

@@ -1,0 +1,10 @@
+site/node_modules/
+site/dist/
+site/.vite/
+.DS_Store
+qa/screenshots/
+qa/browser-downloads/
+research/active-theory/
+materials/supplemental/round-3/_sources/
+materials/supplemental/round-3/_scratch/
+qa/round-3/screenshots/

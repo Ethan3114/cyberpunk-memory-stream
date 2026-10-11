@@ -32,4 +32,7 @@
 - 开场、结尾、斜向中间帧及浮动角色视频截图存于 qa/particles-v11/。Jackie 视频实际播放、readyState=4；检查时没有着色器运行错误。
 - 真实 PageDown：progress=.0517，镜头 y=4.301；原生 End：progress=1、镜头 y=-17.36、visiblePanels=0、scene-02 readyState=4 且实际播放；REPLAY 回到 progress=0，errors=[]。
 - 基础版本 GitHub 存档提交：843b6b0658a9c37f995861601e206078ea963cca。
-- 本轮公网发布与补验进行中。
+- GitHub Pages 部署成功，工作流：https://github.com/Ethan3114/cyberpunk-memory-stream/actions/runs/38134496334，代码提交 3d314e7c88a91d139cb4f0b5ac3701f634ac440a。
+- 公网 CSS 1280×720，DPR=2；实际加载 index-DFIHg5BQ.js，玻璃深度 .15；End 时 progress=1、coreVisible=false、visiblePanels=0，方向 particles-to-void；REPLAY 回到 progress=0。David 片段实际播放、readyState=4；音频 readyState=4、paused=false、currentTime=27.24，error=null；检查结束将 SOUND 关闭。errors=[]。
+- 在线体验：https://ethan3114.github.io/cyberpunk-memory-stream/；公网起止与角色镜头截图、public-check.json 见本地 qa/particles-v11/。
+- 所有运行资源沿用已验收素材，本轮无新增贴图或视频；未声称与原站像素一致或 60fps。

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { openingCut } from './SpaceTimeline';
 import { referenceShaders as S } from './ReferenceShaders';
 import { asset, smooth } from './story';
 const vertex='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.);}';
@@ -53,10 +54,10 @@ export class ReferencePostFX {
   }
   private pass(n:string,rt:THREE.WebGLRenderTarget|null,u:Record<string,unknown>={}){const m=this.programs[n];for(const[k,v]of Object.entries(u))m.uniforms[k].value=v;this.quad.material=m;this.renderer.setRenderTarget(rt);this.renderer.render(this.scene,this.camera);}
   render(scene:THREE.Scene,camera:THREE.Camera,logo:THREE.Group,p:number,time:number,flow?:THREE.Texture,mask?:THREE.Texture,reduced=false,environmentCamera?:THREE.Camera,footerCamera?:THREE.Camera){
-    const opening=p<.20&&this.openingObjects.length>0;
+    const opening=p<openingCut.end&&this.openingObjects.length>0;
     const coreCut=p>=.49&&p<.595;
     const footerCut=p>=.87&&p<.92;
-    const transition=opening?smooth(.11,.20,p):coreCut?smooth(.49,.595,p):footerCut?smooth(.87,.92,p):0;
+    const transition=opening?smooth(openingCut.start,openingCut.end,p):coreCut?smooth(.49,.595,p):footerCut?smooth(.87,.92,p):0;
     const cutKind=opening?'opening-environment':coreCut?'environment-spine':footerCut?'spine-inverted-space':'none';
     const content=[...this.openingObjects,...this.incomingObjects,...this.coreObjects];
     const states=content.map(o=>o.visible);

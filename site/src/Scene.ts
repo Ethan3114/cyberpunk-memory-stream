@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createCore } from './Core';
 import { createPanels, orbitPosition, orbitQuaternion, CAMERA_RADIUS, ORBIT_RADIUS, DESCENT, type Panel } from './Panels';
 import { Journey } from './Journey';
-import { spaceTimeline } from './SpaceTimeline';
+import { openingCut, spaceTimeline } from './SpaceTimeline';
 import { ReferencePostFX } from './ReferencePostFX';
 import { Particles } from './Particles';
 import { ParticleBanks } from './ParticleBanks';
@@ -134,9 +134,9 @@ export class World {
     this.targetPosition.y = -i0 * DESCENT; this.nextPosition.y = -i1 * DESCENT;
     this.targetPosition.lerp(this.nextPosition, fraction);
     this.targetQuaternion.copy(orbitQuaternion(i0)).slerp(orbitQuaternion(i1), fraction);
-    this.targetPosition.multiplyScalar(mix(1.55, 1, smooth(.25, .39, q)));
+    // Reveal the spine at its normal orbit distance; the mask handles entry.
     const travel = clamp((p - .20) / .09,0,3);
-    if(p<.20){
+    if(p<openingCut.end){
       // Scaled reference camera height / look direction. Logo and lens descend together
       // through the stationary forest; the floor approaches with real perspective.
       this.journeyPosition.set(0,space.cameraY,12.05);
@@ -158,7 +158,8 @@ export class World {
     // The cut already presents the destination with footerCamera. Use that pose
     // immediately when returning to the main pass, instead of flying the lens
     // through the logo while interpolating from the spine camera.
-    const follow = reduced || p<.23 || p>=.87 || !this.initialized ? 1 : 1 - Math.pow(.8, dt * 60);
+    const coreCut=p>=.49&&p<.595;
+    const follow = reduced || p<.23 || coreCut || p>=.87 || !this.initialized ? 1 : 1 - Math.pow(.8, dt * 60);
     this.camera.position.lerp(this.targetPosition, follow); this.camera.quaternion.slerp(this.targetQuaternion, follow);
     this.initialized = true; this.camera.updateMatrixWorld();
     this.key.position.copy(this.camera.position).add(new THREE.Vector3(2, 3, 0));

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Media } from './Media';
 import { OpeningBackdrop } from './OpeningBackdrop';
-import { spaceTimeline } from './SpaceTimeline';
+import { openingCut, spaceTimeline } from './SpaceTimeline';
 import { asset, clamp, smooth } from './story';
 
 export class Journey {
@@ -80,8 +80,8 @@ export class Journey {
   }
   update(p: number, time: number, dt: number, reduced: boolean) {
     const space=spaceTimeline(p),footer=space.footer;
-    const t = footer?clamp((p-.87)/.13):clamp(p/.145);
-    this.logo.visible = p < .20 || footer;
+    const t = footer?clamp((p-.87)/.13):clamp(p/openingCut.end);
+    this.logo.visible = p < openingCut.end || footer;
     this.logo.rotation.set(footer?0:reduced ? 0 : .16*Math.sin(t*Math.PI), footer?(reduced?0:-.20+.4*t):reduced ? 0 : -.20+t*3.64, footer?0:reduced ? 0 : -.12*Math.sin(t*Math.PI));
     this.logo.position.set(0,space.logoY,0);
     this.logo.scale.setScalar(this.logoScale);
@@ -90,12 +90,12 @@ export class Journey {
     for(let i=0;i<this.cards.length;i++){
       const card=this.cards[i];if(!card)continue;
       const {mesh,media} = card;const focus=.20+i*.09;
-      const enter=i===0?(p>=.11?1:0):smooth(focus-.085,focus-.012,p);
+      const enter=i===0?(p>=openingCut.start?1:0):smooth(focus-.085,focus-.012,p);
       const exit=i===3?(p<.595?1:0):1-smooth(focus+.026,focus+.080,p);
       const alpha=enter*exit;
       mesh.visible=alpha>.001;mesh.material.uniforms.uOpacity.value=alpha;
       mesh.rotation.set(0,reduced?0:(i%2===0?-.05:.05)*Math.sin(clamp((p-focus)/.09,-1,1)*1.2),0);
-      mesh.material.uniforms.uBlend.value=media?.update(alpha>.60||(i===1&&(p<.20||footer)),time,dt,reduced) ?? 0;
+      mesh.material.uniforms.uBlend.value=media?.update(alpha>.60||(i===1&&(p<openingCut.end||footer)),time,dt,reduced) ?? 0;
     }
     this.backdrop?.update(p,this.cards[1]?.mesh.material.uniforms.uBlend.value ?? 0);
   }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GPUComputationRenderer, type Variable } from 'three/addons/misc/GPUComputationRenderer.js';
 import { FlowField } from './FlowField';
 import { referenceShaders as S } from './ReferenceShaders';
-import { spaceTimeline } from './SpaceTimeline';
+import { openingCut, spaceTimeline } from './SpaceTimeline';
 import { asset, smooth } from './story';
 
 /** Original point preset + ParticleTest shape shader; branded palette / world scale are adaptations. */
@@ -73,7 +73,7 @@ export class Particles {
   get flowMask(){return this.flow?.mask??this.color;}
   resize(_height:number,pixelRatio:number){this.points.material.uniforms.DPR.value=pixelRatio;}
   update(p:number,x:number,y:number,time:number,dt:number,reduced:boolean,camera:THREE.Camera,videoBlend:number){
-    const space=spaceTimeline(p),footer=space.footer,scroll=space.scroll,opacity=p<.20||footer?1:0;
+    const space=spaceTimeline(p),footer=space.footer,scroll=space.scroll,opacity=p<openingCut.end||footer?1:0;
     this.enteredAt??=time;
     this.points.rotation.set(footer?Math.PI:0,space.rotation,0);this.points.position.y=footer?2.8:-2.8;this.points.updateMatrixWorld(true);
     const m=this.points.material;m.uniforms.uVideoBlend.value=videoBlend;m.uniforms.uTime.value=reduced?0:time;m.uniforms.uScroll.value=scroll;m.uniforms.uOpacity.value=opacity;

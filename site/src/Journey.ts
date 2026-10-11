@@ -82,7 +82,7 @@ export class Journey {
     const space=spaceTimeline(p),footer=space.footer;
     const t = footer?clamp((p-.87)/.13):clamp(p/.145);
     this.logo.visible = p < .20 || footer;
-    this.logo.rotation.set(footer?Math.PI:reduced ? 0 : .16*Math.sin(t*Math.PI), reduced ? 0 : -.20+t*3.64, reduced ? 0 : -.12*Math.sin(t*Math.PI));
+    this.logo.rotation.set(footer?0:reduced ? 0 : .16*Math.sin(t*Math.PI), footer?(reduced?0:-.20+.4*t):reduced ? 0 : -.20+t*3.64, footer?0:reduced ? 0 : -.12*Math.sin(t*Math.PI));
     this.logo.position.set(0,space.logoY,0);
     this.logo.scale.setScalar(this.logoScale);
     for(const m of this.logoMaterials){m.transparent=false;m.opacity=1;m.userData.spacePresence.value=space.logoPresence;}

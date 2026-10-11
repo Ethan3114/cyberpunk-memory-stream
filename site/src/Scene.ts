@@ -35,6 +35,8 @@ export class World {
   private core = new THREE.Group();
   private coreRadius=1;
   private observedGap=Infinity;
+  private footerMinDistance=Infinity;
+  private footerAuditFrames=0;
   private journey: Journey;
   private particles?: Particles;
   private materials: THREE.Material[] = [];
@@ -153,7 +155,10 @@ export class World {
     if(p>=.92){this.targetPosition.copy(this.footerCamera.position);this.targetQuaternion.copy(this.footerCamera.quaternion);}
     this.localOffset.set(reduced ? 0 : x * .14*smooth(.20,.23,p), reduced ? 0 : -y * .10*smooth(.20,.23,p), 0).applyQuaternion(this.targetQuaternion);
     this.targetPosition.add(this.localOffset);
-    const follow = reduced || p<.23 || !this.initialized ? 1 : 1 - Math.pow(.8, dt * 60);
+    // The cut already presents the destination with footerCamera. Use that pose
+    // immediately when returning to the main pass, instead of flying the lens
+    // through the logo while interpolating from the spine camera.
+    const follow = reduced || p<.23 || p>=.87 || !this.initialized ? 1 : 1 - Math.pow(.8, dt * 60);
     this.camera.position.lerp(this.targetPosition, follow); this.camera.quaternion.slerp(this.targetQuaternion, follow);
     this.initialized = true; this.camera.updateMatrixWorld();
     this.key.position.copy(this.camera.position).add(new THREE.Vector3(2, 3, 0));
@@ -210,6 +215,13 @@ export class World {
     canvas.dataset.logoPosition=this.journey.logo.position.toArray().map(v=>v.toFixed(4)).join(',');
     canvas.dataset.panelMaterial='WorkItemShader-refracting-rounded-volume';
     canvas.dataset.logoYaw = this.journey.logo.rotation.y.toFixed(3);
+    canvas.dataset.logoRotation=this.journey.logo.rotation.toArray().slice(0,3).join(",");
+    canvas.dataset.logoCameraDistance=this.camera.position.distanceTo(this.journey.logo.position).toFixed(4);
+    if(import.meta.env.DEV&&new URLSearchParams(location.search).get("probe")==="1"){
+      if(p<.87){this.footerMinDistance=Infinity;this.footerAuditFrames=0;}
+      if(p>=.92){this.footerMinDistance=Math.min(this.footerMinDistance,this.camera.position.distanceTo(this.journey.logo.position));this.footerAuditFrames++;}
+      canvas.dataset.footerCameraAudit=JSON.stringify({frames:this.footerAuditFrames,minLogoDistance:this.footerMinDistance});
+    }
     canvas.dataset.particleMode = particleState?.mode ?? 'loading';
     canvas.dataset.particleCount = String(particleState?.count ?? 0);
     canvas.dataset.particleImpulse = (particleState?.impulse ?? 0).toFixed(4);

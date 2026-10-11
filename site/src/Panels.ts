@@ -11,7 +11,7 @@ export const DESCENT = .12 * characters.length;
 export const orbitAngle = (index: number) => Math.PI / 2 - index * ORBIT_STEP;
 export const orbitPosition = (index: number) => new THREE.Vector3(Math.cos(orbitAngle(index)) * ORBIT_RADIUS, -index * DESCENT, Math.sin(orbitAngle(index)) * ORBIT_RADIUS);
 export const orbitQuaternion = (index: number) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2 - orbitAngle(index));
-export type Panel = { group: THREE.Group; image: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>; media: Media; angle: number; position: THREE.Vector3; quaternion: THREE.Quaternion; materials: THREE.Material[]; geometries: THREE.BufferGeometry[]; textures: THREE.Texture[] };
+export type Panel = { group: THREE.Group; caption: THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>; image: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>; media: Media; angle: number; position: THREE.Vector3; quaternion: THREE.Quaternion; materials: THREE.Material[]; geometries: THREE.BufferGeometry[]; textures: THREE.Texture[] };
 
 export async function createPanels(host: HTMLElement): Promise<Panel[]> {
   await document.fonts.ready;
@@ -32,27 +32,24 @@ export async function createPanels(host: HTMLElement): Promise<Panel[]> {
       depthTest:true,depthWrite:true,transparent:false,side:THREE.FrontSide,
     });
     // One closed refracting volume; the video is shaded inside it, with no metallic housing.
-    const imageGeo=new RoundedBoxGeometry(3.46,3.46*9/16,.30,4,.075);
+    const imageGeo=new RoundedBoxGeometry(3.46,3.46*9/16,.15,4,.0375);
     const image=new THREE.Mesh(imageGeo,material);group.add(image);
-    const label = document.createElement('canvas'); label.width = 2048; label.height = 256;
+    // Independent curved UI surface, floating in front of the video at lower left.
+    const label = document.createElement('canvas'); label.width = 2048; label.height = 1024;
     const ctx = label.getContext('2d')!;
-    ctx.fillStyle = '#59dce8'; ctx.font = '500 36px Rajdhani'; ctx.fillText(`0${index + 1} /`, 18, 96);
-    ctx.fillStyle = '#edf7f9'; ctx.font = '600 104px Rajdhani'; ctx.fillText(character.name, 130, 112);
-    ctx.fillStyle = '#b6cbd2'; ctx.font = '400 32px Inter'; ctx.fillText(character.line, 132, 170);
-    ctx.strokeStyle = '#385561'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(18, 12); ctx.lineTo(2030, 12); ctx.stroke();
+    ctx.fillStyle = '#edf7f9'; ctx.font = '500 132px Rajdhani';
+    ctx.fillText(character.name, 120, 770);
+    ctx.fillStyle = '#c5e3ef'; ctx.font = '400 42px Inter'; ctx.fillText(character.line, 124, 860);
     const labelMap = new THREE.CanvasTexture(label); labelMap.colorSpace = THREE.SRGBColorSpace;
-    const labelGeo = new THREE.PlaneGeometry(3.4, 3.4 / 8);
-    const labelMaterial = new THREE.MeshBasicMaterial({ map: labelMap, transparent: true, depthWrite: false });
-    const caption = new THREE.Mesh(labelGeo, labelMaterial); caption.position.set(0, -1.216, .21); group.add(caption);
-    const meta = document.createElement('canvas'); meta.width = 2048; meta.height = 64;
-    const metaCtx = meta.getContext('2d')!; metaCtx.fillStyle = '#9cb8c2'; metaCtx.font = '500 28px Rajdhani'; metaCtx.fillText(`MEMORY / 0${index + 1}`, 10, 42);
-    metaCtx.fillStyle = '#59dce8'; metaCtx.textAlign = 'right'; metaCtx.fillText(character.tag, 2038, 42);
-    const metaMap = new THREE.CanvasTexture(meta); metaMap.colorSpace = THREE.SRGBColorSpace;
-    const metaGeo = new THREE.PlaneGeometry(3.4, 3.4 / 32);
-    const metaMaterial = new THREE.MeshBasicMaterial({ map: metaMap, transparent: true, depthWrite: false });
-    const metaMesh = new THREE.Mesh(metaGeo, metaMaterial); metaMesh.position.set(0, 1.056, .21); group.add(metaMesh);
+    const labelGeo = new THREE.PlaneGeometry(3.46,3.46*9/16,40,20);
+    const labelMaterial = new THREE.ShaderMaterial({
+      uniforms:{tMap:{value:labelMap},uHover:{value:0},uCamDistance:{value:0}},
+      vertexShader:S.WorkItemUIVertex,fragmentShader:S.WorkItemUIFragment,
+      transparent:true,depthTest:true,depthWrite:false,
+    });
+    const caption = new THREE.Mesh(labelGeo,labelMaterial);caption.position.z=.085;group.add(caption);
     const position = orbitPosition(index), quaternion = orbitQuaternion(index);
     group.position.copy(position); group.quaternion.copy(quaternion);
-    return { group, image, media, angle: orbitAngle(index), position, quaternion, materials: [material, labelMaterial, metaMaterial], geometries: [imageGeo, labelGeo, metaGeo], textures: [imageMap, labelMap, metaMap,normalMap,environmentMap] };
+    return { group, caption, image, media, angle: orbitAngle(index), position, quaternion, materials: [material, labelMaterial], geometries: [imageGeo, labelGeo], textures: [imageMap, labelMap,normalMap,environmentMap] };
   }));
 }

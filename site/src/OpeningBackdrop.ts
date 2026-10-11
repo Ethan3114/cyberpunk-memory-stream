@@ -30,6 +30,6 @@ export class OpeningBackdrop {
     this.mesh.position.z=-16;this.mesh.renderOrder=-10;
   }
   resize(aspect:number){this.mesh.scale.set(Math.max(1,aspect/(16/9)),Math.max(1,(16/9)/aspect),1);}
-  update(p:number,blend:number){const alpha=p<.20?1:0;this.mesh.visible=alpha>.001;this.mesh.material.uniforms.uOpacity.value=alpha;this.mesh.material.uniforms.uBlend.value=blend;}
+  update(p:number,blend:number){const footer=p>=.87,alpha=p<.20?1:footer?.5:0;this.mesh.rotation.z=footer?Math.PI:0;this.mesh.visible=alpha>.001;this.mesh.material.uniforms.uOpacity.value=alpha;this.mesh.material.uniforms.uBlend.value=blend;}
   dispose(){this.mesh.geometry.dispose();this.mesh.material.dispose();}
 }

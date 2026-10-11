@@ -75,10 +75,11 @@ export class Journey {
     }
   }
   update(p: number, time: number, dt: number, reduced: boolean) {
-    const t = clamp(p/.145);
-    this.logo.visible = p < .20;
-    this.logo.rotation.set(reduced ? 0 : .16*Math.sin(t*Math.PI), reduced ? 0 : -.20+t*3.64, reduced ? 0 : -.12*Math.sin(t*Math.PI));
-    this.logo.position.set(0,-1.8*smooth(.02,.18,p),0);
+    const footer=p>=.87;
+    const t = footer?clamp((p-.87)/.13):clamp(p/.145);
+    this.logo.visible = p < .20 || footer;
+    this.logo.rotation.set(footer?Math.PI:reduced ? 0 : .16*Math.sin(t*Math.PI), reduced ? 0 : -.20+t*3.64, reduced ? 0 : -.12*Math.sin(t*Math.PI));
+    this.logo.position.set(0,footer?0:-1.8*smooth(.02,.18,p),0);
     this.logo.scale.setScalar(this.logoScale);
     for(const m of this.logoMaterials){m.transparent=false;m.opacity=1;}
     this.logo.updateWorldMatrix(true,true);
@@ -86,11 +87,11 @@ export class Journey {
       const card=this.cards[i];if(!card)continue;
       const {mesh,media} = card;const focus=.20+i*.09;
       const enter=i===0?(p>=.11?1:0):smooth(focus-.085,focus-.012,p);
-      const exit=i===3?1-smooth(.49,.57,p):1-smooth(focus+.026,focus+.080,p);
+      const exit=i===3?(p<.595?1:0):1-smooth(focus+.026,focus+.080,p);
       const alpha=enter*exit;
       mesh.visible=alpha>.001;mesh.material.uniforms.uOpacity.value=alpha;
       mesh.rotation.set(0,reduced?0:(i%2===0?-.05:.05)*Math.sin(clamp((p-focus)/.09,-1,1)*1.2),0);
-      mesh.material.uniforms.uBlend.value=media?.update(alpha>.60||(i===1&&p<.20),time,dt,reduced) ?? 0;
+      mesh.material.uniforms.uBlend.value=media?.update(alpha>.60||(i===1&&(p<.20||footer)),time,dt,reduced) ?? 0;
     }
     this.backdrop?.update(p,this.cards[1]?.mesh.material.uniforms.uBlend.value ?? 0);
   }

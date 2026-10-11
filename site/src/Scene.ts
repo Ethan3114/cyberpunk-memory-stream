@@ -25,9 +25,8 @@ export class World {
   private targetQuaternion = new THREE.Quaternion();
   private journeyPosition = new THREE.Vector3();
   private journeyQuaternion = new THREE.Quaternion();
-  private endPosition = new THREE.Vector3(0, -.4, 13.2);
-  private endQuaternion = new THREE.Quaternion();
-  private overviewPositions = [new THREE.Vector3(-3.15, 1.5, 0), new THREE.Vector3(3.15, 1.5, -.2), new THREE.Vector3(-3.15, -1.35, -.1), new THREE.Vector3(3.15, -1.35, .15)];
+  private footerCamera=new THREE.PerspectiveCamera();
+  private environmentCamera=new THREE.PerspectiveCamera();
   private raycaster = new THREE.Raycaster();
   private initialized = false;
   private scene = new THREE.Scene();
@@ -102,6 +101,7 @@ export class World {
       this.journey.bindOpeningReflection(this.reflection.texture,this.resolution);
       this.post.bind(this.journey.openingBackground!,this.journey.logo);
       this.post.setOpening([...this.journey.openingObjects,this.particles.points],this.journey.environmentObjects);
+      this.post.setCore([this.core,this.banks.group,...this.panels.map(panel=>panel.group)]);
       this.resize(window.innerWidth,window.innerHeight);
     });
     this.resize(window.innerWidth, window.innerHeight);
@@ -122,7 +122,7 @@ export class World {
   render(p: number, x: number, y: number, time: number, reduced: boolean, dt: number, pointerX: number, pointerY: number) {
     if (this.disposed) return;
     this.renderer.info.reset();
-    const q = coreProgress(p), reveal = smooth(.205, .315, q), end = smooth(.885, .99, q);
+    const q = coreProgress(p), reveal = smooth(.205, .315, q), footer=p>=.87, coreVisible=reveal>.001&&p<.92;
     const segment = clamp((q - .39) / .14, 0, 3);
     const i0 = Math.floor(segment), i1 = Math.min(3, i0 + 1), fraction = segment - i0;
     this.targetPosition.copy(orbitPosition(i0)).multiplyScalar(CAMERA_RADIUS / ORBIT_RADIUS);
@@ -131,8 +131,6 @@ export class World {
     this.targetPosition.lerp(this.nextPosition, fraction);
     this.targetQuaternion.copy(orbitQuaternion(i0)).slerp(orbitQuaternion(i1), fraction);
     this.targetPosition.multiplyScalar(mix(1.55, 1, smooth(.25, .39, q)));
-    this.targetPosition.lerp(this.endPosition, end);
-    this.targetQuaternion.slerp(this.endQuaternion, end);
     const travel = clamp((p - .20) / .09,0,3);
     if(p<.20){
       // Scaled reference camera height / look direction. Logo and lens descend together
@@ -143,10 +141,14 @@ export class World {
       this.journeyPosition.set(reduced ? 0 : Math.sin(travel*Math.PI)*.24,0,10-travel*8);
       this.journeyQuaternion.setFromEuler(new THREE.Euler(0,reduced ? 0 : Math.sin(travel*Math.PI)*.013,0));
     }
-    const approach = smooth(.49,.595,p);
+    const approach = p>=.49?1:0;
     this.nextPosition.copy(this.targetPosition);
     this.targetPosition.copy(this.journeyPosition).lerp(this.nextPosition,approach);
-    this.targetQuaternion.copy(this.journeyQuaternion).slerp(orbitQuaternion(i0).slerp(orbitQuaternion(i1),fraction).slerp(this.endQuaternion,end),approach);
+    this.targetQuaternion.copy(this.journeyQuaternion).slerp(orbitQuaternion(i0).slerp(orbitQuaternion(i1),fraction),approach);
+    this.footerCamera.copy(this.camera);this.footerCamera.position.set(0,.64,12.05);
+    this.footerCamera.quaternion.setFromEuler(new THREE.Euler(-Math.atan2(.774,14.19),0,0));this.footerCamera.updateMatrixWorld(true);
+    this.environmentCamera.copy(this.camera);this.environmentCamera.position.set(0,0,-14);this.environmentCamera.quaternion.identity();this.environmentCamera.updateMatrixWorld(true);
+    if(p>=.92){this.targetPosition.copy(this.footerCamera.position);this.targetQuaternion.copy(this.footerCamera.quaternion);}
     this.localOffset.set(reduced ? 0 : x * .14*smooth(.20,.23,p), reduced ? 0 : -y * .10*smooth(.20,.23,p), 0).applyQuaternion(this.targetQuaternion);
     this.targetPosition.add(this.localOffset);
     const follow = reduced || p<.23 || !this.initialized ? 1 : 1 - Math.pow(.8, dt * 60);
@@ -155,24 +157,20 @@ export class World {
     this.key.position.copy(this.camera.position).add(new THREE.Vector3(2, 3, 0));
     this.rim.position.set(-this.camera.position.x * .4, this.camera.position.y - 2, -this.camera.position.z * .4);
     this.journey.update(p,time,dt,reduced);
-    this.core.visible = reveal > .001; this.core.scale.setScalar(mix(.85, 1, reveal));
+    this.core.visible = coreVisible; this.core.scale.setScalar(mix(.85, 1, reveal));
     for (const material of this.coreMaterials) {
       const transparent = reveal < .999;
       if (material.transparent !== transparent) { material.transparent = transparent; material.needsUpdate = true; }
       material.opacity = reveal;
       if(material instanceof THREE.ShaderMaterial&&material.uniforms.uOpacity)material.uniforms.uOpacity.value=reveal;
       const reflectionOff=import.meta.env.DEV&&new URLSearchParams(location.search).get('reflection')==='off';
-      const reflectionStrength=reflectionOff?0:mix(.85,.22,end);
+      const reflectionStrength=reflectionOff?0:.85;
       if(material instanceof THREE.ShaderMaterial&&material.uniforms.uReflection)material.uniforms.uReflection.value.y=reflectionStrength;
       if(material.userData.particleReflectionStrength)material.userData.particleReflectionStrength.value=reflectionStrength;
     }
     for (let i = 0; i < this.panels.length; i++) {
-      const panel = this.panels[i]; panel.group.visible = q > .265;
-      const overview=this.overviewPositions[i],startAngle=Math.atan2(panel.position.z,panel.position.x),finishAngle=Math.atan2(overview.z,overview.x);
-      const angleDelta=Math.atan2(Math.sin(finishAngle-startAngle),Math.cos(finishAngle-startAngle));
-      const routeRadius=mix(Math.hypot(panel.position.x,panel.position.z),Math.hypot(overview.x,overview.z),end)+Math.sin(end*Math.PI)*.85;
-      panel.group.position.set(Math.cos(startAngle+angleDelta*end)*routeRadius,mix(panel.position.y,overview.y,end),Math.sin(startAngle+angleDelta*end)*routeRadius);
-      panel.group.quaternion.copy(panel.quaternion).slerp(this.endQuaternion, end);
+      const panel = this.panels[i]; panel.group.visible = q > .265&&p<.92;
+      panel.group.position.copy(panel.position);panel.group.quaternion.copy(panel.quaternion);
       panel.group.scale.setScalar(smooth(.265 + i * .009, .335 + i * .009, q));
       panel.image.material.uniforms.uResolution.value.copy(this.resolution);
       panel.image.material.uniforms.uTime.value = reduced?0:time;
@@ -181,16 +179,18 @@ export class World {
     }
     this.scene.updateMatrixWorld(true);
     this.raycaster.setFromCamera(new THREE.Vector2(pointerX, -pointerY), this.camera);
-    const hits = q > .32 && q < .89 ? this.raycaster.intersectObjects(this.panels.map(panel => panel.image)) : [];
+    const hits = q > .32 && p < .87 ? this.raycaster.intersectObjects(this.panels.map(panel => panel.image)) : [];
     const hit = hits[0]?.object;
     for (let i=0;i<this.panels.length;i++) {
       const panel=this.panels[i], uniforms = panel.image.material.uniforms;
       const hover = !reduced && panel.image === hit ? 1 : 0;
       uniforms.uHover.value = mix(uniforms.uHover.value, hover, 1 - Math.pow(.92, dt * 60));
-      const active = q>.32 && q<.89 && (Math.abs(q-characters[i].focus)<.058 || panel.image===hit);
+      panel.caption.material.uniforms.uHover.value=uniforms.uHover.value;
+      panel.caption.material.uniforms.uCamDistance.value=this.camera.position.distanceTo(panel.group.position);
+      const active = q>.32 && p<.87 && (Math.abs(q-characters[i].focus)<.058 || panel.image===hit);
       uniforms.uVideoBlend.value=panel.media.update(active,time,dt,reduced) ?? 0;
     }
-    if(this.panels.length===4){this.banks.protect(this.panels.map(panel=>panel.group),this.camera,q>.265,smooth(.90,.97,p));
+    if(this.panels.length===4){this.banks.protect(this.panels.map(panel=>panel.group),this.camera,q>.265&&p<.92,0);
       const clearance=this.banks.measure(time);if(clearance)this.renderer.domElement.dataset.bankClearance=JSON.stringify(clearance);}
     this.banks.update(p,time,reduced);
     if(this.particles)this.particles.points.material.uniforms.uLogoPos.value.set(0,0,0);
@@ -222,14 +222,14 @@ export class World {
     canvas.dataset.glassSpineGap=JSON.stringify(gaps);canvas.dataset.minimumObservedGlassGap=String(this.observedGap);
     canvas.dataset.coreMaterial='native-getFBR-original-maps';
     canvas.dataset.reflection=import.meta.env.DEV&&new URLSearchParams(location.search).get('reflection')==='off'?'disabled-for-comparison':'normal-offset-particle-pass';
-    canvas.dataset.phase=p<.14?'logo':p<.52?'environments':p<.94?'memories':'ending';
+    canvas.dataset.phase=p<.14?'logo':p<.52?'environments':p<.87?'memories':'ending';
     if(this.journey.logo.visible&&this.particles){
       const environmentState=this.journey.environmentObjects.map(o=>o.visible);this.journey.environmentObjects.forEach(o=>{o.visible=false;});
       this.journey.logo.visible=false;
       this.renderer.setRenderTarget(this.reflection);this.renderer.clear();this.renderer.render(this.scene,this.camera);
       this.renderer.setRenderTarget(null);this.journey.logo.visible=true;this.journey.environmentObjects.forEach((o,i)=>{o.visible=environmentState[i];});
     }
-    if (reveal > .001) {
+    if (coreVisible) {
       for (const panel of this.panels) panel.group.visible = false;
       // Capture particles without the spine, avoiding recursive self-reflection.
       this.core.visible=false;
@@ -237,16 +237,17 @@ export class World {
       this.core.visible=true;
       this.renderer.setRenderTarget(this.refraction); this.renderer.clear(); this.renderer.render(this.scene, this.camera);
       this.renderer.setRenderTarget(null);
-      for (const panel of this.panels) panel.group.visible = q > .265;
+      for (const panel of this.panels) panel.group.visible = q > .265&&p<.92;
     }
-    this.post.render(this.scene,this.camera,this.journey.logo,p,time,this.particles?.flowTexture,this.particles?.flowMask,reduced);
+    this.post.render(this.scene,this.camera,this.journey.logo,p,time,this.particles?.flowTexture,this.particles?.flowMask,reduced,this.environmentCamera,this.footerCamera);
+    canvas.dataset.coreVisible=String(coreVisible);canvas.dataset.visiblePanels=String(this.panels.filter(panel=>panel.group.visible).length);canvas.dataset.footer=String(footer);canvas.dataset.glassThickness="0.15";
     canvas.dataset.draws = String(this.renderer.info.render.calls);
     canvas.dataset.triangles = String(this.renderer.info.render.triangles);
   }
 
   private glassGap(group:THREE.Group){
     // Exact distance from the projected closed slab footprint to the spine's bounding cylinder.
-    const corners=[[-1.745,-.20],[1.745,-.20],[1.745,.20],[-1.745,.20]].map(([x,z])=>new THREE.Vector3(x,0,z).applyMatrix4(group.matrixWorld));
+    const corners=[[-1.745,-.10],[1.745,-.10],[1.745,.10],[-1.745,.10]].map(([x,z])=>new THREE.Vector3(x,0,z).applyMatrix4(group.matrixWorld));
     let distance=Infinity,positive=true,negative=true;
     for(let i=0;i<4;i++){
       const a=corners[i],b=corners[(i+1)%4],dx=b.x-a.x,dz=b.z-a.z,cross=dx*(-a.z)-dz*(-a.x);

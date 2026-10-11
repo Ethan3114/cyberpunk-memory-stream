@@ -12,6 +12,7 @@ export class ReferencePostFX {
   private incoming=this.target(THREE.UnsignedByteType);private cut=this.target(THREE.UnsignedByteType);
   private openingObjects:THREE.Object3D[]=[];private incomingObjects:THREE.Object3D[]=[];
   private incomingCamera=new THREE.PerspectiveCamera();
+  private coreObjects:THREE.Object3D[]=[];
   private volumeInput=this.target();private volumeX=this.target();private volumeY=this.target();private volume=this.target();
   private maskScene=new THREE.Scene();private occluder?:THREE.Group;private background?:THREE.Mesh;private sourceBackground?:THREE.Mesh;
   private volumeMaterial?:THREE.ShaderMaterial;
@@ -42,6 +43,7 @@ export class ReferencePostFX {
     this.volumeMaterial.fragmentShader=source.fragmentShader.replace('vec4(color,uOpacity)','vec4(color*smoothstep(.5,.05,length(vUv-.5))*.35,uOpacity)');this.background.material=this.volumeMaterial;
     this.maskScene.add(this.background);this.occluder=logo.clone(true);this.occluder.matrixAutoUpdate=false;this.occluder.traverse(o=>{if(o instanceof THREE.Mesh)o.material=this.black;});this.maskScene.add(this.occluder);}
   setOpening(opening:THREE.Object3D[],incoming:THREE.Object3D[]){this.openingObjects=opening;this.incomingObjects=incoming;}
+  setCore(objects:THREE.Object3D[]){this.coreObjects=objects;}
   resize(width:number,height:number){
     this.volumeInput.depthBuffer=true;this.main.depthBuffer=true;this.main.setSize(width,height);this.home.setSize(width,height);this.incoming.depthBuffer=true;this.incoming.setSize(width,height);this.cut.setSize(width,height);this.programs.transition.uniforms.resolution.value.set(width,height);this.programs.transition.uniforms.uRatio.value=width/height;
     let w=Math.max(1,Math.round(width*.3/2)),h=Math.max(1,Math.round(height*.3/2));for(let i=0;i<3;i++){this.bloomH[i].setSize(w,h);this.bloomV[i].setSize(w,h);w=Math.max(1,Math.round(w/2));h=Math.max(1,Math.round(h/2));}this.bloom.setSize(this.bloomH[0].width,this.bloomH[0].height);
@@ -50,27 +52,38 @@ export class ReferencePostFX {
     for(const rt of [this.volumeInput,this.volumeX,this.volumeY,this.volume])rt.setSize(Math.max(1,Math.round(width*.2)),Math.max(1,Math.round(height*.2)));
   }
   private pass(n:string,rt:THREE.WebGLRenderTarget|null,u:Record<string,unknown>={}){const m=this.programs[n];for(const[k,v]of Object.entries(u))m.uniforms[k].value=v;this.quad.material=m;this.renderer.setRenderTarget(rt);this.renderer.render(this.scene,this.camera);}
-  render(scene:THREE.Scene,camera:THREE.Camera,logo:THREE.Group,p:number,time:number,flow?:THREE.Texture,mask?:THREE.Texture,reduced=false){
+  render(scene:THREE.Scene,camera:THREE.Camera,logo:THREE.Group,p:number,time:number,flow?:THREE.Texture,mask?:THREE.Texture,reduced=false,environmentCamera?:THREE.Camera,footerCamera?:THREE.Camera){
     const opening=p<.20&&this.openingObjects.length>0;
-    const transition=smooth(.11,.20,p);
-    const incomingState=this.incomingObjects.map(o=>o.visible);
-    if(opening)this.incomingObjects.forEach(o=>{o.visible=false;});
-    this.renderer.setRenderTarget(this.main);this.renderer.clear();this.renderer.render(scene,camera);
-    if(opening)this.incomingObjects.forEach((o,i)=>{o.visible=incomingState[i];});
-    const on=(name:string)=>!this.disabled.has(name)&&!this.disabled.has('off');const volume=p<.20&&logo.visible&&on('volume');
+    const coreCut=p>=.49&&p<.595;
+    const footerCut=p>=.87&&p<.92;
+    const transition=opening?smooth(.11,.20,p):coreCut?smooth(.49,.595,p):footerCut?smooth(.87,.92,p):0;
+    const cutKind=opening?'opening-environment':coreCut?'environment-spine':footerCut?'spine-inverted-space':'none';
+    const content=[...this.openingObjects,...this.incomingObjects,...this.coreObjects];
+    const states=content.map(o=>o.visible);
+    const renderSubset=(target:THREE.WebGLRenderTarget,objects:THREE.Object3D[],view:THREE.Camera)=>{
+      content.forEach((o,i)=>{o.visible=states[i]&&objects.includes(o);});
+      this.renderer.setRenderTarget(target);this.renderer.clear();this.renderer.render(scene,view);
+      content.forEach((o,i)=>{o.visible=states[i];});
+    };
+    const from=opening?this.openingObjects:coreCut?this.incomingObjects:this.coreObjects;
+    const fromCamera=coreCut?environmentCamera??camera:camera;
+    if(opening||coreCut||footerCut)renderSubset(this.main,from,fromCamera);
+    else {this.renderer.setRenderTarget(this.main);this.renderer.clear();this.renderer.render(scene,camera);}
+    const on=(name:string)=>!this.disabled.has(name)&&!this.disabled.has('off');const volume=(opening||p>=.87)&&logo.visible&&on('volume');
     if(volume&&this.occluder&&this.background&&this.sourceBackground){
-      this.occluder.matrix.copy(logo.matrixWorld);this.background.matrix.copy(this.sourceBackground.matrixWorld);this.maskScene.updateMatrixWorld(true);this.renderer.setRenderTarget(this.volumeInput);this.renderer.clear();this.renderer.render(this.maskScene,camera);
+      this.occluder.matrix.copy(logo.matrixWorld);this.background.matrix.copy(this.sourceBackground.matrixWorld);this.maskScene.updateMatrixWorld(true);this.renderer.setRenderTarget(this.volumeInput);this.renderer.clear();this.renderer.render(this.maskScene,p>=.87?footerCamera??camera:camera);
       const res=new THREE.Vector2(this.volume.width,this.volume.height);this.pass('lightBlur',this.volumeX,{tDiffuse:this.volumeInput.texture,resolution:res,uDir:new THREE.Vector2(.3,0)});this.pass('lightBlur',this.volumeY,{tDiffuse:this.volumeX.texture,uDir:new THREE.Vector2(0,.3)});
-      const pos=new THREE.Vector3().setFromMatrixPosition(logo.matrixWorld).project(camera);this.pass('volume',this.volume,{lightPos:new THREE.Vector2(pos.x*.5+.5,pos.y*.5+.5)});
+      const pos=new THREE.Vector3().setFromMatrixPosition(logo.matrixWorld).project(p>=.87?footerCamera??camera:camera);this.pass('volume',this.volume,{lightPos:new THREE.Vector2(pos.x*.5+.5,pos.y*.5+.5)});
     }
     this.pass('home',this.home,{uVolume:volume?1.1:0});
     let composited=this.home.texture;
-    if(opening&&transition>0){
-      const openingState=this.openingObjects.map(o=>o.visible);this.openingObjects.forEach(o=>{o.visible=false;});
-      this.incomingCamera.copy(camera as THREE.PerspectiveCamera);this.incomingCamera.position.set(0,0,10);this.incomingCamera.quaternion.identity();this.incomingCamera.updateMatrixWorld(true);
-      this.renderer.setRenderTarget(this.incoming);this.renderer.clear();this.renderer.render(scene,this.incomingCamera);
-      this.openingObjects.forEach((o,i)=>{o.visible=openingState[i];});
-      this.pass('transition',this.cut,{uTransition:transition});composited=this.cut.texture;
+    if((opening||coreCut||footerCut)&&transition>0){
+      this.incomingCamera.copy(camera as THREE.PerspectiveCamera);
+      if(opening){this.incomingCamera.position.set(0,0,10);this.incomingCamera.quaternion.identity();this.incomingCamera.updateMatrixWorld(true);}
+      const to=opening?this.incomingObjects:coreCut?this.coreObjects:this.openingObjects;
+      const toCamera=footerCut?footerCamera??camera:opening?this.incomingCamera:camera;
+      renderSubset(this.incoming,to,toCamera);
+      this.pass('transition',this.cut,{uTransition:transition,uAngle:.7});composited=this.cut.texture;
     }
     if(on('bloom')){let input=composited;for(let i=0;i<3;i++){this.pass('gaussian'+i,this.bloomH[i],{colorTexture:input,texSize:new THREE.Vector2(this.bloomH[i].width,this.bloomH[i].height),direction:new THREE.Vector2(.3,0)});this.pass('gaussian'+i,this.bloomV[i],{colorTexture:this.bloomH[i].texture,direction:new THREE.Vector2(0,.3)});input=this.bloomV[i].texture;}this.pass('bloom',this.bloom,{bloomStrength:p<.23?.6:.5,bloomRadius:p<.23?.8:.5});}
     if(on('streak')){
@@ -81,7 +94,7 @@ export class ReferencePostFX {
       for(let i=1;i<6;i++){this.pass('up',this.up[i],{tHigh:this.down[i-1].texture,tScene:last,uResolution:new THREE.Vector2(this.up[i].width,this.up[i].height)});last=this.up[i].texture;}this.pass('streak',this.streak);
     }
     this.pass('final',null,{tDiffuse:composited,uBloomEnabled:on('bloom')?1:0,uStreakEnabled:on('streak')?1:0,time:reduced?0:time,uScroll:p,tFluid:flow??this.volume.texture,tFluidMask:mask??this.volume.texture});
-    const d=this.renderer.domElement.dataset;d.transition=transition.toFixed(4);d.transitionShader='FXScrollTransition';d.fxPipeline='ldr-home-volume-bloom3-lens8-global';d.fxEnabled=JSON.stringify({volume,bloom:on('bloom'),streak:on('streak')});
+    const d=this.renderer.domElement.dataset;d.transition=transition.toFixed(4);d.transitionKind=cutKind;d.transitionShader='FXScrollTransition';d.fxPipeline='ldr-home-volume-bloom3-lens8-global';d.fxEnabled=JSON.stringify({volume,bloom:on('bloom'),streak:on('streak')});
     if(import.meta.env.DEV&&new URLSearchParams(location.search).get('probe')==='1'&&time-this.probeTime>1){this.probeTime=time;d.fxEnergy=JSON.stringify({volume:volume?this.energy(this.volume):0,bloom:on('bloom')?this.energy(this.bloom):0,streak:on('streak')?this.energy(this.streak):0});}
   }
   private energy(rt:THREE.WebGLRenderTarget){const data=new Uint16Array(rt.width*rt.height*4);this.renderer.readRenderTargetPixels(rt,0,0,rt.width,rt.height,data);let sum=0;for(let i=0;i<data.length;i+=4)sum+=THREE.DataUtils.fromHalfFloat(data[i])+THREE.DataUtils.fromHalfFloat(data[i+1])+THREE.DataUtils.fromHalfFloat(data[i+2]);return sum/(rt.width*rt.height*3);}

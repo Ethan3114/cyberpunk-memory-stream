@@ -71,11 +71,11 @@ export function App() {
       node.style.setProperty('--city-scale', String(mix(1.055, 1.53, smooth(0, .29, p))));
       node.style.setProperty('--city-x', `${reduced ? 0 : x * -10}px`);
       node.style.setProperty('--city-y', `${reduced ? 0 : y * -10}px`);
-      node.style.setProperty('--core-opacity', String(smooth(.205, .315, q)));
+      node.style.setProperty('--core-opacity', String(smooth(.205, .315, q)*(1-smooth(.87,.92,p))));
       node.style.setProperty('--core-y', `${mix(32, -32, smooth(.3, .88, q))}%`);
       node.style.setProperty('--core-x', `${reduced ? 0 : x * 16}px`);
       node.style.setProperty('--transition-opacity', '0');
-      node.style.setProperty('--end-opacity', String(smooth(.94, .99, q)));
+      node.style.setProperty('--end-opacity', String(smooth(.975, .995, p)));
       node.style.setProperty('--progress', String(p));
       node.dataset.progress = p.toFixed(4);
       node.dataset.motion = reduced ? 'reduced' : 'full';
@@ -89,7 +89,7 @@ export function App() {
       for (let i = 0; i < characters.length; i++) {
         const screen = screens.current[i]; if (!screen) continue;
         if (world) {
-          screen.setAttribute('aria-hidden', q < .29 || (q < .94 && i !== activeIndex) ? 'true' : 'false');
+          screen.setAttribute('aria-hidden', q < .29 || p >= .92 || i !== activeIndex ? 'true' : 'false');
           continue;
         }
         const pose = screenPose(q, i, width, height);
@@ -102,7 +102,7 @@ export function App() {
       }
       const current = p<.52?'':q<.29?'MEMORY STREAM':q>.91?'END OF TRANSMISSION':characters[Math.min(3,Math.max(0,Math.round((q-.39)/.14)))].name;
       if (current !== label) { label = current; setChapter(current); }
-      const nextEnding = q > .945;
+      const nextEnding = p > .975;
       if (nextEnding !== wasEnding) { wasEnding = nextEnding; setEnding(nextEnding); }
       try { world?.render(p, x, y, now / 1000, reduced, dt, pointerX, pointerY); } catch(error) { useFallback(error); }
       raf = requestAnimationFrame(frame);
@@ -144,7 +144,6 @@ export function App() {
       <div className="atmosphere" aria-hidden="true" />
       <header className="header">
         <a className="wordmark" href="#top" onClick={event => { event.preventDefault(); replay.current = { from: window.scrollY, start: performance.now() }; stage.current?.focus({preventScroll:true}); }} aria-label="Replay experience"><img src={asset('cdpr.svg')} alt="CD PROJEKT RED" /></a>
-        <span className="chapter-label">{chapter}</span>
         <button className={`sound ${sound ? 'is-on' : ''}`} onClick={toggleSound} aria-pressed={sound} title="I Really Want to Stay at Your House — Rosa Walton & Hallie Coggins">
           <span className="sound-bars" aria-hidden="true"><i /><i /><i /><i /></span>
           SOUND {sound ? 'ON' : 'OFF'}
@@ -160,19 +159,15 @@ export function App() {
       <div className="screens" aria-label="Character memories">
         {characters.map((character, i) => <div className={`screen screen-${character.id}`} key={character.id} ref={node => { screens.current[i] = node; }}>
           <article className="screen-inner" aria-label={character.name}>
-            <div className="screen-meta"><span>MEMORY / 0{i + 1}</span><span>{character.tag}</span></div>
             <div className="screen-image"><img src={asset(character.image)} alt={`${character.name}, ${i < 2 ? 'Cyberpunk 2077' : 'Cyberpunk: Edgerunners'}`} draggable="false" /><div className="image-shade" /><span className="screen-corner top-left" /><span className="screen-corner bottom-right" /></div>
-            <div className="screen-caption"><div><span className="character-number">0{i + 1} /</span><h2>{character.name}</h2></div><p>{character.line}</p></div>
+            <div className="screen-caption"><div><h2>{character.name}</h2></div><p>{character.line}</p></div>
           </article>
         </div>)}
       </div>
-      <div className="ending" aria-hidden={!ending}><p>EVERY LIGHT LEAVES A TRACE.</p><button tabIndex={ending ? 0 : -1} onClick={() => { replay.current = { from: window.scrollY, start: performance.now() }; stage.current?.focus({preventScroll:true}); }}>REPLAY <span aria-hidden="true">↗</span></button></div>
+      <div className="ending" aria-hidden={!ending}><button tabIndex={ending ? 0 : -1} onClick={() => { replay.current = { from: window.scrollY, start: performance.now() }; stage.current?.focus({preventScroll:true}); }}>REPLAY <span aria-hidden="true">↗</span></button></div>
       <footer className="footer">
         <span className="scroll-hint" aria-hidden={chapter !== ''}><i aria-hidden="true" /> SCROLL TO ENTER</span>
-        <span className="fan-note">CYBERPUNK 2077 · EDGERUNNERS</span>
-        <span className="transmission">{ending || chapter === 'END OF TRANSMISSION' ? '04 / 04' : chapter === '' ? '00 / 04' : `0${Math.max(1, characters.findIndex(c => c.name === chapter) + 1)} / 04`}</span>
       </footer>
-      <div className="progress-track" aria-hidden="true"><i /></div>
     </main>
     <div id="top" className="scroll-space" aria-hidden="true" />
     <audio ref={audio} loop preload="none" onPause={() => setSound(false)} onPlaying={() => setSound(true)}><source src={asset('music.m4a')} type="audio/mp4" /></audio>

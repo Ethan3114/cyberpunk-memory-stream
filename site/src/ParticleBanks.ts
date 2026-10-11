@@ -58,10 +58,10 @@ export class ParticleBanks {
             if(t>1.&&hitY>uCoreHeight.x&&hitY<uCoreHeight.y&&aSeed<uCoreForeground)vAllowed=0.;}
           if(uProtectMedia>.5){for(int i=0;i<4;i++){if(uPanelActive[i]<.5)continue;
             vec3 local=(uPanelInverse[i]*vec4(vWorld,1.)).xyz;
-            if(all(lessThan(abs(local),vec3(1.86,1.11,.33))))vAllowed=0.;
+            if(all(lessThan(abs(local),vec3(1.86,1.11,.19))))vAllowed=0.;
             // Clear foreground sprites from the media aperture; retain the glass border's refraction.
             vec3 eye=(uPanelInverse[i]*vec4(uCameraPosition,1.)).xyz;
-            float dz=local.z-eye.z;float face=eye.z>=0.?.15:-.15;
+            float dz=local.z-eye.z;float face=eye.z>=0.?.075:-.075;
             if(abs(dz)>.0001){float t=(face-eye.z)/dz;vec2 hit=eye.xy+t*(local.xy-eye.xy);
               if(t>1.&&all(lessThan(abs(hit),vec2(1.63,.94))))vAllowed=0.;}
           }}vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aSize*uHeight*uDpr/max(1.,-mv.z),1.4*uDpr,10.*uDpr);vColor=color;vSeed=aSeed;}`,
@@ -93,7 +93,7 @@ export class ParticleBanks {
     if(this.material){this.material.uniforms.uProtectMedia.value=enabled?1:0;this.material.uniforms.uCoreForeground.value=coreForeground;}
   }
   update(p:number,time:number,reduced:boolean){
-    const alpha=smooth(.51,.59,p);this.group.visible=alpha>.001;
+    const alpha=p<.92?smooth(.49,.595,p):0;this.group.visible=alpha>.001;
     if(this.material){
       // The reference writes opaque sprites. Restore point-to-point depth once its entrance finishes.
       const fading=alpha<.999;
@@ -114,8 +114,8 @@ export class ParticleBanks {
       if(a>.00001&&d>0){const t=(-b-Math.sqrt(d))/(2*a),hitY=this.cameraPosition.y+t*dy;if(t>1&&hitY>this.coreHeight.x&&hitY<this.coreHeight.y&&seeds.getX(i)<this.coreForeground){coreForeground++;continue;}}
       for(let panel=0;panel<4;panel++){if(this.panelActive[panel]<.5)continue;const inverse=this.panelInverse[panel];
         local.copy(point).applyMatrix4(inverse);
-        if(Math.abs(local.x)<1.86&&Math.abs(local.y)<1.11&&Math.abs(local.z)<.33){volume++;break;}
-        eye.copy(this.cameraPosition).applyMatrix4(inverse);const dz=local.z-eye.z,t=((eye.z>=0?.15:-.15)-eye.z)/dz;
+        if(Math.abs(local.x)<1.86&&Math.abs(local.y)<1.11&&Math.abs(local.z)<.19){volume++;break;}
+        eye.copy(this.cameraPosition).applyMatrix4(inverse);const dz=local.z-eye.z,t=((eye.z>=0?.075:-.075)-eye.z)/dz;
         if(Math.abs(dz)>.0001&&t>1&&Math.abs(eye.x+t*(local.x-eye.x))<1.63&&Math.abs(eye.y+t*(local.y-eye.y))<.94){foreground++;break;}
       }
     }

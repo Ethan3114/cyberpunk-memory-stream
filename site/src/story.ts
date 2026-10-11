@@ -1,7 +1,7 @@
 export const asset = (path: string) => `${import.meta.env.BASE_URL}assets/${path}`;
 // Keep the approved core-camera choreography in its original coordinate system.
-export const coreProgress = (progress: number) => clamp((progress - .4) / .6);
-export const pageFocus = (focus: number) => .4 + .6 * focus;
+export const coreProgress = (progress: number) => clamp((progress - .4) / .55);
+export const pageFocus = (focus: number) => .4 + .55 * focus;
 
 export const characters = [
   { id: 'v', name: 'V', line: 'A borrowed future. A life still her own.', tag: 'THE SURVIVOR', image: 'v.webp', focus: .39, side: -1, angle: -8 },
@@ -44,16 +44,8 @@ export function screenPose(progress: number, index: number, width: number, heigh
     y = height * mix(.455, .20, t);
     yaw = character.angle * (1 + t);
   }
-  const end = smooth(.89, .985, progress);
-  if (end > 0) {
-    const targetX = width * (index % 2 === 0 ? .24 : .76);
-    const targetY = height * (index < 2 ? .31 : .66);
-    x = mix(x, targetX, end);
-    y = mix(y, targetY, end);
-    scale = mix(Math.min(scale, 1.1), Math.min(.39, width / 2600), end);
-    opacity = mix(opacity, .88, end);
-    yaw = mix(yaw, index % 2 === 0 ? -9 : 9, end);
-  }
+  const end = smooth(.85, .94, progress);
+  opacity *= 1-end;
   opacity *= smooth(.265, .315, progress);
   return { x, y, scale, opacity, yaw, active: Math.abs(r) <= .28 && end < .25 };
 }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GPUComputationRenderer, type Variable } from 'three/addons/misc/GPUComputationRenderer.js';
 import { FlowField } from './FlowField';
 import { referenceShaders as S } from './ReferenceShaders';
-import { asset, smooth } from './story';
+import { asset, clamp, smooth } from './story';
 
 /** Original point preset + ParticleTest shape shader; branded palette / world scale are adaptations. */
 export class Particles {
@@ -71,8 +71,8 @@ export class Particles {
   get flowMask(){return this.flow?.mask??this.color;}
   resize(_height:number,pixelRatio:number){this.points.material.uniforms.DPR.value=pixelRatio;}
   update(p:number,x:number,y:number,time:number,dt:number,reduced:boolean,camera:THREE.Camera,videoBlend:number){
-    const scroll=1,opacity=p<.20?1:0;
-    this.points.rotation.y=-.22-THREE.MathUtils.degToRad(190)*smooth(0,.20,p);this.points.position.y=-2.8;this.points.updateMatrixWorld(true);
+    const footer=p>=.87,scroll=1,opacity=p<.20||footer?1:0;
+    this.points.rotation.set(footer?Math.PI:0,footer?THREE.MathUtils.degToRad(130)-Math.PI*clamp((p-.87)/.13):-.22-THREE.MathUtils.degToRad(190)*smooth(0,.20,p),0);this.points.position.y=footer?2.8:-2.8;this.points.updateMatrixWorld(true);
     const m=this.points.material;m.uniforms.uVideoBlend.value=videoBlend;m.uniforms.uTime.value=reduced?0:time;m.uniforms.uScroll.value=scroll;m.uniforms.uOpacity.value=opacity;
     this.points.visible=opacity>.001;const transparent=opacity<.999;if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true;}
     if(!reduced&&this.points.visible&&this.gpu&&this.flow&&this.position){

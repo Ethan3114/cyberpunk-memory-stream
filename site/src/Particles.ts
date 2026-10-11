@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { GPUComputationRenderer, type Variable } from 'three/addons/misc/GPUComputationRenderer.js';
 import { FlowField } from './FlowField';
 import { referenceShaders as S } from './ReferenceShaders';
-import { asset, clamp, smooth } from './story';
+import { spaceTimeline } from './SpaceTimeline';
+import { asset, smooth } from './story';
 
 /** Original point preset + ParticleTest shape shader; branded palette / world scale are adaptations. */
 export class Particles {
@@ -18,6 +19,7 @@ export class Particles {
   private basis=new THREE.Matrix3();
   private cameraBasis=new THREE.Matrix3();
   private lastProbe=0;
+  private enteredAt?:number;
   private probeData=new Float32Array(256*256*4);
   constructor(private renderer:THREE.WebGLRenderer,forest:Float32Array,poster:THREE.Texture,video:THREE.VideoTexture){
     let seed=19;const rand=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
@@ -71,9 +73,11 @@ export class Particles {
   get flowMask(){return this.flow?.mask??this.color;}
   resize(_height:number,pixelRatio:number){this.points.material.uniforms.DPR.value=pixelRatio;}
   update(p:number,x:number,y:number,time:number,dt:number,reduced:boolean,camera:THREE.Camera,videoBlend:number){
-    const footer=p>=.87,scroll=1,opacity=p<.20||footer?1:0;
-    this.points.rotation.set(footer?Math.PI:0,footer?THREE.MathUtils.degToRad(130)-Math.PI*clamp((p-.87)/.13):-.22-THREE.MathUtils.degToRad(190)*smooth(0,.20,p),0);this.points.position.y=footer?2.8:-2.8;this.points.updateMatrixWorld(true);
+    const space=spaceTimeline(p),footer=space.footer,scroll=space.scroll,opacity=p<.20||footer?1:0;
+    this.enteredAt??=time;
+    this.points.rotation.set(footer?Math.PI:0,space.rotation,0);this.points.position.y=footer?2.8:-2.8;this.points.updateMatrixWorld(true);
     const m=this.points.material;m.uniforms.uVideoBlend.value=videoBlend;m.uniforms.uTime.value=reduced?0:time;m.uniforms.uScroll.value=scroll;m.uniforms.uOpacity.value=opacity;
+    m.uniforms.uVisible.value=footer||reduced?1:smooth(0,5,time-this.enteredAt);
     this.points.visible=opacity>.001;const transparent=opacity<.999;if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true;}
     if(!reduced&&this.points.visible&&this.gpu&&this.flow&&this.position){
       this.viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);

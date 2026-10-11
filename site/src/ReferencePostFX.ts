@@ -9,7 +9,7 @@ export class ReferencePostFX {
   private main=this.target(THREE.UnsignedByteType);private home=this.target(THREE.UnsignedByteType);private bloom=this.target();private prefilter=this.target();private streak=this.target();
   private bloomH=Array.from({length:3},()=>this.target());private bloomV=Array.from({length:3},()=>this.target());
   private down=Array.from({length:8},()=>this.target());private up=Array.from({length:6},()=>this.target());
-  private incoming=this.target(THREE.UnsignedByteType);private cut=this.target(THREE.UnsignedByteType);
+  private incomingHome=this.target(THREE.UnsignedByteType);private incoming=this.target(THREE.UnsignedByteType);private cut=this.target(THREE.UnsignedByteType);
   private openingObjects:THREE.Object3D[]=[];private incomingObjects:THREE.Object3D[]=[];
   private incomingCamera=new THREE.PerspectiveCamera();
   private coreObjects:THREE.Object3D[]=[];
@@ -45,7 +45,7 @@ export class ReferencePostFX {
   setOpening(opening:THREE.Object3D[],incoming:THREE.Object3D[]){this.openingObjects=opening;this.incomingObjects=incoming;}
   setCore(objects:THREE.Object3D[]){this.coreObjects=objects;}
   resize(width:number,height:number){
-    this.volumeInput.depthBuffer=true;this.main.depthBuffer=true;this.main.setSize(width,height);this.home.setSize(width,height);this.incoming.depthBuffer=true;this.incoming.setSize(width,height);this.cut.setSize(width,height);this.programs.transition.uniforms.resolution.value.set(width,height);this.programs.transition.uniforms.uRatio.value=width/height;
+    this.volumeInput.depthBuffer=true;this.main.depthBuffer=true;this.main.setSize(width,height);this.home.setSize(width,height);this.incoming.depthBuffer=true;this.incoming.setSize(width,height);this.incomingHome.setSize(width,height);this.cut.setSize(width,height);this.programs.transition.uniforms.resolution.value.set(width,height);this.programs.transition.uniforms.uRatio.value=width/height;
     let w=Math.max(1,Math.round(width*.3/2)),h=Math.max(1,Math.round(height*.3/2));for(let i=0;i<3;i++){this.bloomH[i].setSize(w,h);this.bloomV[i].setSize(w,h);w=Math.max(1,Math.round(w/2));h=Math.max(1,Math.round(h/2));}this.bloom.setSize(this.bloomH[0].width,this.bloomH[0].height);
     w=width;h=Math.max(1,Math.round(height/2));this.prefilter.setSize(width,height);this.streak.setSize(width,height);this.programs.streak.uniforms.resolution.value.set(width,height);this.programs.final.uniforms.resolution.value.set(width,height);
     for(let i=0;i<8;i++){this.down[i].setSize(w,h);w=Math.max(1,Math.floor(w/2));}for(let i=0;i<6;i++)this.up[i].setSize(this.down[i].width,this.down[i].height);
@@ -75,7 +75,7 @@ export class ReferencePostFX {
       const res=new THREE.Vector2(this.volume.width,this.volume.height);this.pass('lightBlur',this.volumeX,{tDiffuse:this.volumeInput.texture,resolution:res,uDir:new THREE.Vector2(.3,0)});this.pass('lightBlur',this.volumeY,{tDiffuse:this.volumeX.texture,uDir:new THREE.Vector2(0,.3)});
       const pos=new THREE.Vector3().setFromMatrixPosition(logo.matrixWorld).project(p>=.87?footerCamera??camera:camera);this.pass('volume',this.volume,{lightPos:new THREE.Vector2(pos.x*.5+.5,pos.y*.5+.5)});
     }
-    this.pass('home',this.home,{uVolume:volume?1.1:0});
+    this.pass('home',this.home,{tDiffuse:this.main.texture,uVolume:volume&&!footerCut?1.1:0});
     let composited=this.home.texture;
     if((opening||coreCut||footerCut)&&transition>0){
       this.incomingCamera.copy(camera as THREE.PerspectiveCamera);
@@ -83,7 +83,8 @@ export class ReferencePostFX {
       const to=opening?this.incomingObjects:coreCut?this.coreObjects:this.openingObjects;
       const toCamera=footerCut?footerCamera??camera:opening?this.incomingCamera:camera;
       renderSubset(this.incoming,to,toCamera);
-      this.pass('transition',this.cut,{uTransition:transition,uAngle:.7});composited=this.cut.texture;
+      if(footerCut)this.pass('home',this.incomingHome,{tDiffuse:this.incoming.texture,uVolume:volume?1.1:0});
+      this.pass('transition',this.cut,{tMap2:footerCut?this.incomingHome.texture:this.incoming.texture,uTransition:transition,uAngle:.7});composited=this.cut.texture;
     }
     if(on('bloom')){let input=composited;for(let i=0;i<3;i++){this.pass('gaussian'+i,this.bloomH[i],{colorTexture:input,texSize:new THREE.Vector2(this.bloomH[i].width,this.bloomH[i].height),direction:new THREE.Vector2(.3,0)});this.pass('gaussian'+i,this.bloomV[i],{colorTexture:this.bloomH[i].texture,direction:new THREE.Vector2(0,.3)});input=this.bloomV[i].texture;}this.pass('bloom',this.bloom,{bloomStrength:p<.23?.6:.5,bloomRadius:p<.23?.8:.5});}
     if(on('streak')){
@@ -98,5 +99,5 @@ export class ReferencePostFX {
     if(import.meta.env.DEV&&new URLSearchParams(location.search).get('probe')==='1'&&time-this.probeTime>1){this.probeTime=time;d.fxEnergy=JSON.stringify({volume:volume?this.energy(this.volume):0,bloom:on('bloom')?this.energy(this.bloom):0,streak:on('streak')?this.energy(this.streak):0});}
   }
   private energy(rt:THREE.WebGLRenderTarget){const data=new Uint16Array(rt.width*rt.height*4);this.renderer.readRenderTargetPixels(rt,0,0,rt.width,rt.height,data);let sum=0;for(let i=0;i<data.length;i+=4)sum+=THREE.DataUtils.fromHalfFloat(data[i])+THREE.DataUtils.fromHalfFloat(data[i+1])+THREE.DataUtils.fromHalfFloat(data[i+2]);return sum/(rt.width*rt.height*3);}
-  dispose(){for(const rt of [this.main,this.home,this.incoming,this.cut,this.bloom,this.prefilter,this.streak,...this.bloomH,...this.bloomV,...this.down,...this.up,this.volumeInput,this.volumeX,this.volumeY,this.volume])rt.dispose();for(const m of Object.values(this.programs))m.dispose();(this.programs.final.uniforms.tNormal.value as THREE.Texture).dispose();(this.programs.transition.uniforms.tNormal.value as THREE.Texture).dispose();this.volumeMaterial?.dispose();this.black.dispose();this.quad.geometry.dispose();}
+  dispose(){for(const rt of [this.main,this.home,this.incoming,this.incomingHome,this.cut,this.bloom,this.prefilter,this.streak,...this.bloomH,...this.bloomV,...this.down,...this.up,this.volumeInput,this.volumeX,this.volumeY,this.volume])rt.dispose();for(const m of Object.values(this.programs))m.dispose();(this.programs.final.uniforms.tNormal.value as THREE.Texture).dispose();(this.programs.transition.uniforms.tNormal.value as THREE.Texture).dispose();this.volumeMaterial?.dispose();this.black.dispose();this.quad.geometry.dispose();}
 }

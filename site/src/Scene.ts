@@ -3,6 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createCore } from './Core';
 import { createPanels, orbitPosition, orbitQuaternion, CAMERA_RADIUS, ORBIT_RADIUS, DESCENT, type Panel } from './Panels';
 import { Journey } from './Journey';
+import { spaceTimeline } from './SpaceTimeline';
 import { ReferencePostFX } from './ReferencePostFX';
 import { Particles } from './Particles';
 import { ParticleBanks } from './ParticleBanks';
@@ -122,6 +123,7 @@ export class World {
   render(p: number, x: number, y: number, time: number, reduced: boolean, dt: number, pointerX: number, pointerY: number) {
     if (this.disposed) return;
     this.renderer.info.reset();
+    const space=spaceTimeline(p);
     const q = coreProgress(p), reveal = smooth(.205, .315, q), footer=p>=.87, coreVisible=reveal>.001&&p<.92;
     const segment = clamp((q - .39) / .14, 0, 3);
     const i0 = Math.floor(segment), i1 = Math.min(3, i0 + 1), fraction = segment - i0;
@@ -135,7 +137,7 @@ export class World {
     if(p<.20){
       // Scaled reference camera height / look direction. Logo and lens descend together
       // through the stationary forest; the floor approaches with real perspective.
-      this.journeyPosition.set(0,.64-1.8*smooth(.02,.18,p),12.05);
+      this.journeyPosition.set(0,space.cameraY,12.05);
       this.journeyQuaternion.setFromEuler(new THREE.Euler(-Math.atan2(.774,14.19),0,0));
     }else{
       this.journeyPosition.set(reduced ? 0 : Math.sin(travel*Math.PI)*.24,0,10-travel*8);
@@ -145,7 +147,7 @@ export class World {
     this.nextPosition.copy(this.targetPosition);
     this.targetPosition.copy(this.journeyPosition).lerp(this.nextPosition,approach);
     this.targetQuaternion.copy(this.journeyQuaternion).slerp(orbitQuaternion(i0).slerp(orbitQuaternion(i1),fraction),approach);
-    this.footerCamera.copy(this.camera);this.footerCamera.position.set(0,.64,12.05);
+    this.footerCamera.copy(this.camera);this.footerCamera.position.set(0,space.cameraY,12.05);
     this.footerCamera.quaternion.setFromEuler(new THREE.Euler(-Math.atan2(.774,14.19),0,0));this.footerCamera.updateMatrixWorld(true);
     this.environmentCamera.copy(this.camera);this.environmentCamera.position.set(0,0,-14);this.environmentCamera.quaternion.identity();this.environmentCamera.updateMatrixWorld(true);
     if(p>=.92){this.targetPosition.copy(this.footerCamera.position);this.targetQuaternion.copy(this.footerCamera.quaternion);}
@@ -193,7 +195,7 @@ export class World {
     if(this.panels.length===4){this.banks.protect(this.panels.map(panel=>panel.group),this.camera,q>.265&&p<.92,0);
       const clearance=this.banks.measure(time);if(clearance)this.renderer.domElement.dataset.bankClearance=JSON.stringify(clearance);}
     this.banks.update(p,time,reduced);
-    if(this.particles)this.particles.points.material.uniforms.uLogoPos.value.set(0,0,0);
+    if(this.particles)this.particles.points.material.uniforms.uLogoPos.value.copy(this.journey.logo.position);
     const particleState = this.particles?.update(p,pointerX,pointerY,time,dt,reduced,this.camera,this.journey.openingBlend);
     const canvas = this.renderer.domElement;
     canvas.dataset.orbit = (segment * 50).toFixed(2);
@@ -224,10 +226,11 @@ export class World {
     canvas.dataset.reflection=import.meta.env.DEV&&new URLSearchParams(location.search).get('reflection')==='off'?'disabled-for-comparison':'normal-offset-particle-pass';
     canvas.dataset.phase=p<.14?'logo':p<.52?'environments':p<.87?'memories':'ending';
     if(this.journey.logo.visible&&this.particles){
-      const environmentState=this.journey.environmentObjects.map(o=>o.visible);this.journey.environmentObjects.forEach(o=>{o.visible=false;});
+      const excluded=[...this.journey.environmentObjects,this.core,this.banks.group,...this.panels.map(panel=>panel.group)];
+      const excludedState=excluded.map(o=>o.visible);excluded.forEach(o=>{o.visible=false;});
       this.journey.logo.visible=false;
       this.renderer.setRenderTarget(this.reflection);this.renderer.clear();this.renderer.render(this.scene,this.camera);
-      this.renderer.setRenderTarget(null);this.journey.logo.visible=true;this.journey.environmentObjects.forEach((o,i)=>{o.visible=environmentState[i];});
+      this.renderer.setRenderTarget(null);this.journey.logo.visible=true;excluded.forEach((o,i)=>{o.visible=excludedState[i];});
     }
     if (coreVisible) {
       for (const panel of this.panels) panel.group.visible = false;
@@ -240,7 +243,7 @@ export class World {
       for (const panel of this.panels) panel.group.visible = q > .265&&p<.92;
     }
     this.post.render(this.scene,this.camera,this.journey.logo,p,time,this.particles?.flowTexture,this.particles?.flowMask,reduced,this.environmentCamera,this.footerCamera);
-    canvas.dataset.coreVisible=String(coreVisible);canvas.dataset.visiblePanels=String(this.panels.filter(panel=>panel.group.visible).length);canvas.dataset.footer=String(footer);canvas.dataset.glassThickness="0.15";
+    canvas.dataset.coreVisible=String(coreVisible);canvas.dataset.visiblePanels=String(this.panels.filter(panel=>panel.group.visible).length);canvas.dataset.footer=String(footer);canvas.dataset.spaceScroll=String(space.scroll);canvas.dataset.spaceDirection=footer?"particles-to-void":"void-to-particles";canvas.dataset.glassThickness="0.15";
     canvas.dataset.draws = String(this.renderer.info.render.calls);
     canvas.dataset.triangles = String(this.renderer.info.render.triangles);
   }

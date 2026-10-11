@@ -1,6 +1,6 @@
 # Cyberpunk 2077 — Memory Stream
 
-Desktop cinematic single-page tribute: a user-provided rotating 3D Cyberpunk wordmark, four official game environments, a sculpted spine, and four radial video screens in the order **female V → Jackie Welles → David → Lucy**. English copy. No second pages.
+Desktop cinematic single-page tribute: a user-provided rotating 3D Cyberpunk wordmark, four official game environments, a sculpted spine, and four radial video screens in the order **female V → Jackie Welles → David → Lucy**. English copy. No second pages. The ending returns to an inverted particle/video space and exits into near-empty darkness.
 
 ## Run locally
 
@@ -51,7 +51,9 @@ The public repository is [Ethan3114/cyberpunk-memory-stream](https://github.com/
 - `site/src/ReferencePostFX.ts`: volumetric mask/blur/radial sampling, 3-mip UnrealBloom, 8-level HydraLensStreak GlobalComposite, and a two-scene FXScrollTransition cut.
 - `site/src/ReferenceShaders.ts`: expanded published GLSL with desktop branches selected.
 - `site/src/story.ts`: character content and the 2D fallback trajectory.
-- `qa/ending-v10.md`: ending silhouette protection and release verification.
+- `qa/space-v11.md`: thin glass, floating lower-left captions, refracting cuts, and opposing Home/Footer particle timelines.
+- `site/src/SpaceTimeline.ts`: forward opening and reversed ending choreography.
+- `qa/ending-v10.md`: previous ending silhouette protection and release verification.
 - `site/public/assets/`: ready-to-serve visuals, fonts, and music.
 - `site/public/assets/asset-manifest.json`: material origins and processing.
 - `materials/`: local collected assets and research; the public repository includes provenance README files, while the prepared runtime assets are under `site/public/assets/`.

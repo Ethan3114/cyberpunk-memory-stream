@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Media } from './Media';
 import { OpeningBackdrop } from './OpeningBackdrop';
+import { spaceTimeline } from './SpaceTimeline';
 import { asset, clamp, smooth } from './story';
 
 export class Journey {
@@ -32,7 +33,7 @@ export class Journey {
             const material = o.material as THREE.MeshStandardMaterial;
             material.color.set('#f3e65b'); material.metalness = .72; material.roughness = .29;
             material.emissive.set('#80670a'); material.emissiveIntensity = .13;
-            this.logoMaterials.push(material);
+            material.userData.spacePresence={value:1};this.logoMaterials.push(material);
           }
         });
       }),
@@ -61,27 +62,30 @@ export class Journey {
   bindOpeningReflection(texture:THREE.Texture,resolution:THREE.Vector2){
     for(const material of this.logoMaterials){
       material.onBeforeCompile=shader=>{
+        shader.uniforms.uLogoPresence=material.userData.spacePresence;
         shader.uniforms.tOpeningReflection={value:texture};shader.uniforms.uOpeningResolution={value:resolution};
-        shader.fragmentShader='uniform sampler2D tOpeningReflection;uniform vec2 uOpeningResolution;\n'+shader.fragmentShader;
+        shader.fragmentShader='uniform float uLogoPresence;uniform sampler2D tOpeningReflection;uniform vec2 uOpeningResolution;\n'+shader.fragmentShader;
         shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
           vec2 openingUv=gl_FragCoord.xy/uOpeningResolution-normal.xy*.055;
           vec3 openingLight=texture2D(tOpeningReflection,clamp(openingUv,.001,.999)).rgb;
           float openingFresnel=pow(1.-max(0.,dot(normal,normalize(vViewPosition))),2.);
           outgoingLight+=openingLight*(.35+openingFresnel*.75);
+          outgoingLight*=uLogoPresence;
           #include <opaque_fragment>
         `);
       };
-      material.customProgramCacheKey=()=> 'opening-video-particle-reflection-v1';
+      material.customProgramCacheKey=()=> 'opening-video-particle-reflection-v2';
+      material.needsUpdate=true;
     }
   }
   update(p: number, time: number, dt: number, reduced: boolean) {
-    const footer=p>=.87;
+    const space=spaceTimeline(p),footer=space.footer;
     const t = footer?clamp((p-.87)/.13):clamp(p/.145);
     this.logo.visible = p < .20 || footer;
     this.logo.rotation.set(footer?Math.PI:reduced ? 0 : .16*Math.sin(t*Math.PI), reduced ? 0 : -.20+t*3.64, reduced ? 0 : -.12*Math.sin(t*Math.PI));
-    this.logo.position.set(0,footer?0:-1.8*smooth(.02,.18,p),0);
+    this.logo.position.set(0,space.logoY,0);
     this.logo.scale.setScalar(this.logoScale);
-    for(const m of this.logoMaterials){m.transparent=false;m.opacity=1;}
+    for(const m of this.logoMaterials){m.transparent=false;m.opacity=1;m.userData.spacePresence.value=space.logoPresence;}
     this.logo.updateWorldMatrix(true,true);
     for(let i=0;i<this.cards.length;i++){
       const card=this.cards[i];if(!card)continue;

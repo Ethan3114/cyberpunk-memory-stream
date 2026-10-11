@@ -79,7 +79,7 @@ export function App() {
       node.style.setProperty('--progress', String(p));
       node.dataset.progress = p.toFixed(4);
       node.dataset.motion = reduced ? 'reduced' : 'full';
-      node.dataset.phase = p<.14?'logo':p<.52?'environments':p<.94?'memories':'ending';
+      node.dataset.phase = p<.14?'logo':p<.52?'environments':p<.87?'memories':'ending';
       for(let i=0;i<4;i++){
         const focus=.20+i*.09,enter=i===0?smooth(.12,.19,p):smooth(focus-.085,focus-.012,p),exit=i===3?1-smooth(.49,.57,p):1-smooth(focus+.026,focus+.080,p);
         if(environments.current[i]){environments.current[i]!.style.opacity=String(enter*exit);environments.current[i]!.style.transform=`scale(${mix(1,1.18,smooth(focus-.05,focus+.06,p))})`;}

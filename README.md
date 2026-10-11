@@ -30,10 +30,10 @@ For a local repository-path build:
 
 ```sh
 cd site
-VITE_BASE_PATH=/cyberpunk/ npm run build
+VITE_BASE_PATH=/cyberpunk-memory-stream/ npm run build
 ```
 
-The public repository is [Ethan3114/cyberpunk-memory-stream](https://github.com/Ethan3114/cyberpunk-memory-stream). Deployment is in progress; the live URL will be recorded after verification.
+The public repository is [Ethan3114/cyberpunk-memory-stream](https://github.com/Ethan3114/cyberpunk-memory-stream). The live GitHub Pages site is [https://ethan3114.github.io/cyberpunk-memory-stream/](https://ethan3114.github.io/cyberpunk-memory-stream/). Public video, audio, scroll and replay were verified on 2026-10-11.
 
 ## Structure
 

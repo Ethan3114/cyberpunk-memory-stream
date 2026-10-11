@@ -8,3 +8,10 @@ research/active-theory/
 materials/supplemental/round-3/_sources/
 materials/supplemental/round-3/_scratch/
 qa/round-3/screenshots/
+
+# Local collection sources and verification artifacts
+materials/**
+!materials/**/
+!materials/**/README.md
+qa/release/
+qa/particles-v*/

@@ -21,4 +21,12 @@ TypeScript / Vite 构建通过；JS 1,025.18 kB，gzip 268.07 kB；单包 >500 k
 
 ## 发布状态
 
-公开仓库已创建：[Ethan3114/cyberpunk-memory-stream](https://github.com/Ethan3114/cyberpunk-memory-stream)。正在上传约 42 MB 运行素材并配置 GitHub Pages；上线验证完成前不视为部署成功。
+公开仓库已创建：[Ethan3114/cyberpunk-memory-stream](https://github.com/Ethan3114/cyberpunk-memory-stream)。GitHub Pages 已成功发布：[线上体验](https://ethan3114.github.io/cyberpunk-memory-stream/)。首次运行 [38122805228](https://github.com/Ethan3114/cyberpunk-memory-stream/actions/runs/38122805228) 为 Success，build 17 秒、deploy 20 秒，总计 44 秒；部署代码提交 `21eb8f1bcb3559d4bd16185564fd5fc6a383882e`。
+
+`particles-v10/upload-hash-check.json`：公开仓库的 38 个运行素材 SHA256 全部与本地一致。
+
+`particles-v10/public-check.json`：公网实际 CSS 1440×900、DPR 1；开场 scene-02 视频实际播放，原生 PageDown 后 progress .0752、相机和字标下降 .4951；角色 Jackie 视频实际播放；音乐 readyState=4、paused=false、无媒体错误；原生 End 至 progress=1、屏幕/脊椎最小间距 .41659951；REPLAY 回到 0，scene-02 恢复播放，音乐检查后已关闭。浏览器错误日志为空。
+
+`particles-v10/public-ending.png` 是公网实际结尾截图；截图前后 progress 均为 1，视口均为 1440×900。没有通过开发锚点在生产站伪造结尾。
+
+正式仓库子路径构建 `VITE_BASE_PATH=/cyberpunk-memory-stream/` 已验证，JS 1,025.19 kB、gzip 268.08 kB。未做跨设备帧率基准。

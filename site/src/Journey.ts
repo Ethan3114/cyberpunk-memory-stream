@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Media } from './Media';
 import { OpeningBackdrop } from './OpeningBackdrop';
 import { openingCut, spaceTimeline } from './SpaceTimeline';
+import { bevelWordmark, LogoGlass } from './LogoGlass';
 import { asset, clamp, smooth } from './story';
 
 export class Journey {
@@ -11,7 +12,7 @@ export class Journey {
   logoMesh!: THREE.Mesh;
   ready: Promise<void>;
   private cards: {mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>; poster: THREE.Texture; media?: Media}[] = [];
-  private logoMaterials: THREE.MeshStandardMaterial[] = [];
+  private glass = new LogoGlass();
   private logoScale = 2;
   private disposed = false;
   private backdrop?:OpeningBackdrop;
@@ -30,10 +31,9 @@ export class Journey {
         g.scene.traverse(o => {
           if (o instanceof THREE.Mesh) {
             this.logoMesh = o;
-            const material = o.material as THREE.MeshStandardMaterial;
-            material.color.set('#f3e65b'); material.metalness = .72; material.roughness = .29;
-            material.emissive.set('#80670a'); material.emissiveIntensity = .13;
-            material.userData.spacePresence={value:1};this.logoMaterials.push(material);
+            const oldGeometry=o.geometry;const beveled=bevelWordmark(oldGeometry);if(beveled!==oldGeometry){o.geometry=beveled;oldGeometry.dispose();}
+            for(const material of Array.isArray(o.material)?o.material:[o.material])material.dispose();
+            o.material=this.glass.material;
           }
         });
       }),
@@ -60,23 +60,7 @@ export class Journey {
   }
   resize(aspect: number) { this.aspect=aspect;this.logoScale = Math.min(3.1, 12.05 * Math.tan(THREE.MathUtils.degToRad(17.5)) * aspect * .62 / 2);this.backdrop?.resize(aspect); }
   bindOpeningReflection(texture:THREE.Texture,resolution:THREE.Vector2){
-    for(const material of this.logoMaterials){
-      material.onBeforeCompile=shader=>{
-        shader.uniforms.uLogoPresence=material.userData.spacePresence;
-        shader.uniforms.tOpeningReflection={value:texture};shader.uniforms.uOpeningResolution={value:resolution};
-        shader.fragmentShader='uniform float uLogoPresence;uniform sampler2D tOpeningReflection;uniform vec2 uOpeningResolution;\n'+shader.fragmentShader;
-        shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
-          vec2 openingUv=gl_FragCoord.xy/uOpeningResolution-normal.xy*.055;
-          vec3 openingLight=texture2D(tOpeningReflection,clamp(openingUv,.001,.999)).rgb;
-          float openingFresnel=pow(1.-max(0.,dot(normal,normalize(vViewPosition))),2.);
-          outgoingLight+=openingLight*(.35+openingFresnel*.75);
-          outgoingLight*=uLogoPresence;
-          #include <opaque_fragment>
-        `);
-      };
-      material.customProgramCacheKey=()=> 'opening-video-particle-reflection-v2';
-      material.needsUpdate=true;
-    }
+    this.glass.bind(texture,resolution,this.openingPoster,this.openingVideo);
   }
   update(p: number, time: number, dt: number, reduced: boolean) {
     const space=spaceTimeline(p),footer=space.footer;
@@ -85,7 +69,6 @@ export class Journey {
     this.logo.rotation.set(footer?0:reduced ? 0 : .16*Math.sin(t*Math.PI), footer?(reduced?0:-.20+.4*t):reduced ? 0 : -.20+t*3.64, footer?0:reduced ? 0 : -.12*Math.sin(t*Math.PI));
     this.logo.position.set(0,space.logoY,0);
     this.logo.scale.setScalar(this.logoScale);
-    for(const m of this.logoMaterials){m.transparent=false;m.opacity=1;m.userData.spacePresence.value=space.logoPresence;}
     this.logo.updateWorldMatrix(true,true);
     for(let i=0;i<this.cards.length;i++){
       const card=this.cards[i];if(!card)continue;
@@ -98,7 +81,8 @@ export class Journey {
       mesh.material.uniforms.uBlend.value=media?.update(alpha>.60||(i===1&&(p<openingCut.end||footer)),time,dt,reduced) ?? 0;
     }
     this.backdrop?.update(p,this.cards[1]?.mesh.material.uniforms.uBlend.value ?? 0);
+    this.glass.update(reduced?0:time,space.logoPresence,footer,this.openingBlend);
   }
   pause(){for(const c of this.cards)if(c)c.media?.pause();}
-  dispose(){this.disposed=true;this.backdrop?.dispose();for(const c of this.cards)if(c){c.mesh.geometry.dispose();c.mesh.material.dispose();c.poster.dispose();c.media?.dispose();}this.logo.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(o.material as THREE.Material).dispose();}});}
+  dispose(){this.disposed=true;this.backdrop?.dispose();this.glass.dispose();for(const c of this.cards)if(c){c.mesh.geometry.dispose();c.mesh.material.dispose();c.poster.dispose();c.media?.dispose();}this.logo.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose();});}
 }

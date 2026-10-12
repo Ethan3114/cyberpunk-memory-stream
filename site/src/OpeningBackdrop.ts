@@ -9,10 +9,12 @@ export class OpeningBackdrop {
   mesh:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>;
   constructor(poster:THREE.Texture,media:Media){
     const blur=import.meta.env.DEV&&new URLSearchParams(location.search).get('openingBlur')==='off'?0:.022;
-    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(36,20.25),new THREE.ShaderMaterial({
+    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(36,20.25,48,24),new THREE.ShaderMaterial({
       uniforms:{tPoster:{value:poster},tVideo:{value:media.texture},uBlend:{value:0},uOpacity:{value:1},uBlur:{value:blur}},
       transparent:true,depthTest:true,depthWrite:false,
-      vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      // HomeVideoShader bends the plane back at its center. Scale its curve to
+      // our world, leaving the geometry's outer edge behind a soft aperture.
+      vertexShader:'varying vec2 vUv;void main(){vUv=uv;vec3 pos=position;pos.z-=6.4*(-.5+1.-smoothstep(0.,1.,abs(uv.x-.5)));gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.);}',
       fragmentShader:`uniform sampler2D tPoster,tVideo;uniform float uBlend,uOpacity,uBlur;varying vec2 vUv;
         vec3 sampleMedia(vec2 uv){vec3 col=texture2D(tPoster,clamp(uv,.001,.999)).rgb;
           if(uBlend>.001){vec3 movie=texture2D(tVideo,clamp(uv,.001,.999)).rgb;
@@ -21,10 +23,12 @@ export class OpeningBackdrop {
           }return col;}
         void main(){vec3 color=sampleMedia(vUv)*.16;
           for(int i=0;i<12;i++){float angle=float(i)*2.399963;float radius=sqrt((float(i)+.5)/12.);color+=sampleMedia(vUv+vec2(cos(angle),sin(angle)*1.7778)*radius*uBlur)*.07;}
-          float vignette=1.-smoothstep(.12,.68,length((vUv-.5)*vec2(1.,1.1)));
-          color*=.055+.17*vignette;
+          float aperture=1.-smoothstep(.05,.5,length(vUv-.5));
+          color*=.055+.17*aperture;
           color=mix(color,vec3(.025,.035,.075),.18);
-          gl_FragColor=vec4(color,uOpacity);
+          // Unlike an intensity-only vignette, alpha reaches zero on every
+          // boundary, so neither the tinted floor nor the dark edge can form a box.
+          gl_FragColor=vec4(color*aperture,uOpacity*aperture);
           #include <colorspace_fragment>
         }`,
     }));

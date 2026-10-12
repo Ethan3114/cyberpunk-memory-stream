@@ -17,6 +17,9 @@ export class World {
   private textures: THREE.Texture[] = [];
   private environment: THREE.WebGLRenderTarget;
   private reflection = new THREE.WebGLRenderTarget(1, 1);
+  // The spine may render in the same frame as the incoming footer. Never let
+  // its reflection capture replace the glass logo's background texture.
+  private logoRefraction = new THREE.WebGLRenderTarget(1, 1);
   private banks = new ParticleBanks();
   private refraction = new THREE.WebGLRenderTarget(1, 1);
   private resolution = new THREE.Vector2();
@@ -101,7 +104,7 @@ export class World {
       this.scene.add(this.core);
       if (this.disposed) { this.releaseAssets(); return; }
       this.particles = new Particles(this.renderer,new Float32Array(forest),this.journey.openingPoster,this.journey.openingVideo); this.scene.add(this.particles.points);
-      this.journey.bindOpeningReflection(this.reflection.texture,this.resolution);
+      this.journey.bindOpeningReflection(this.logoRefraction.texture,this.resolution);
       this.post.bind(this.journey.openingBackground!,this.journey.logo);
       this.post.setOpening([...this.journey.openingObjects,this.particles.points],this.journey.environmentObjects);
       this.post.setCore([this.core,this.banks.group,...this.panels.map(panel=>panel.group)]);
@@ -118,6 +121,7 @@ export class World {
     this.renderer.getDrawingBufferSize(this.resolution);
     this.refraction.setSize(Math.round(width), Math.round(height));
     this.reflection.setSize(this.resolution.x,this.resolution.y);
+    this.logoRefraction.setSize(this.resolution.x,this.resolution.y);
     this.post.resize(this.resolution.x,this.resolution.y);
     for (const panel of this.panels) panel.image.material.uniforms.uResolution.value.copy(this.resolution);
   }
@@ -218,6 +222,8 @@ export class World {
     canvas.dataset.logoYaw = this.journey.logo.rotation.y.toFixed(3);
     canvas.dataset.logoRotation=this.journey.logo.rotation.toArray().slice(0,3).join(",");
     canvas.dataset.logoCameraDistance=this.camera.position.distanceTo(this.journey.logo.position).toFixed(4);
+    canvas.dataset.logoMaterial='HomeLogoShader-adapted-glass';
+    canvas.dataset.logoVertices=String(this.journey.logoMesh?.geometry.getAttribute('position').count??0);
     if(import.meta.env.DEV&&new URLSearchParams(location.search).get("probe")==="1"){
       if(p<.87){this.footerMinDistance=Infinity;this.footerAuditFrames=0;}
       if(p>=.92){this.footerMinDistance=Math.min(this.footerMinDistance,this.camera.position.distanceTo(this.journey.logo.position));this.footerAuditFrames++;}
@@ -242,7 +248,7 @@ export class World {
       const excluded=[...this.journey.environmentObjects,this.core,this.banks.group,...this.panels.map(panel=>panel.group)];
       const excludedState=excluded.map(o=>o.visible);excluded.forEach(o=>{o.visible=false;});
       this.journey.logo.visible=false;
-      this.renderer.setRenderTarget(this.reflection);this.renderer.clear();this.renderer.render(this.scene,this.camera);
+      this.renderer.setRenderTarget(this.logoRefraction);this.renderer.clear();this.renderer.render(this.scene,footer?this.footerCamera:this.camera);
       this.renderer.setRenderTarget(null);this.journey.logo.visible=true;excluded.forEach((o,i)=>{o.visible=excludedState[i];});
     }
     if (coreVisible) {
@@ -282,6 +288,6 @@ export class World {
   }
   dispose() {
     this.disposed = true; this.releaseAssets(); this.journey.dispose(); this.particles?.dispose();
-    this.post.dispose();this.banks.dispose();this.reflection.dispose();this.environment.dispose(); this.refraction.dispose(); this.renderer.dispose();
+    this.post.dispose();this.banks.dispose();this.reflection.dispose();this.logoRefraction.dispose();this.environment.dispose(); this.refraction.dispose(); this.renderer.dispose();
   }
 }
